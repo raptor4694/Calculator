@@ -13,50 +13,54 @@ public class ExpressionMatrixIndex implements ExpressionReferenceable {
 	
 	@Override
 	public String toCompiledString() {
-		return "<IDX %s[%s, %s]>".format(
-				(Object) matrix.toCompiledString(),
+		return "<IDX %s[%s, %s]>".format((Object) matrix.toCompiledString(),
 				row.toCompiledString(), column.toCompiledString());
 	}
 	
 	@Override
 	public Object eval(Scope scope) {
-		// Number[][] matrix = evalReference(scope);
 		Object obj = matrix.eval(scope);
 		
 		if (obj instanceof String) {
 			int length = ((String) obj).length();
 			evalIndex(scope, length, length);
-			return ((String) obj).substring(lastRow - 1,
-					lastColumn - 1);
-		} else if (!(obj instanceof Number[][]))
+			return ((String) obj).substring(lastRow - 1, lastColumn - 1);
+		} else if (!(obj instanceof Object[][]))
 			throw new TypeError("not a matrix");
 		
-		Number[][] matrix = (Number[][]) obj;
+		Object[][] matrix = (Object[][]) obj;
 		
 		evalIndex(scope, rowCount(matrix), columnCount(matrix));
 		
 		return matrix[lastRow - 1][lastColumn - 1];
 	}
 	
-	public final Number[][] evalReference(Scope scope) {
-		Number[][] matrix;
+	public final Object[][] evalReference(Scope scope) {
+		Object[][] matrix;
 		
 		Object obj;
 		
 		obj = this.matrix.eval(scope);
 		
-		if (!(obj instanceof Number[][]))
+		if (!(obj instanceof Object[][]))
 			throw new TypeError("not a matrix");
 		
-		matrix = (Number[][]) obj;
+		matrix = (Object[][]) obj;
 		
 		evalIndex(scope, rowCount(matrix), columnCount(matrix));
 		
 		return matrix;
 	}
 	
-	private final void evalIndex(Scope scope, int rowCount,
-			int columnCount) {
+	protected final Number[][] evalNumberReference(Scope scope) {
+		Object[][] result = evalReference(scope);
+		
+		check(result instanceof Number[][], TypeError.class);
+		
+		return (Number[][]) result;
+	}
+	
+	private final void evalIndex(Scope scope, int rowCount, int columnCount) {
 		scope = new Scope(scope);
 		scope.setVariableLocally("$", Real.valueOf(rowCount));
 		Object obj = row.eval(scope);
@@ -81,39 +85,34 @@ public class ExpressionMatrixIndex implements ExpressionReferenceable {
 	
 	@Override
 	public ExpressionMatrixIndexAssign toAssign(Expression value) {
-		return new ExpressionMatrixIndexAssign(matrix, row, column,
+		return new ExpressionMatrixIndexAssign(matrix, row, column, value);
+	}
+	
+	@Override
+	public ExpressionMatrixIndexAssignOp toAssignOp(EnumOperator operator,
+			Expression value) {
+		return new ExpressionMatrixIndexAssignOp(matrix, row, column, operator,
 				value);
 	}
 	
 	@Override
-	public ExpressionMatrixIndexAssignOp toAssignOp(
-			EnumOperator operator, Expression value) {
-		return new ExpressionMatrixIndexAssignOp(matrix, row, column,
-				operator, value);
-	}
-	
-	@Override
 	public ExpressionMatrixIndexPostfixDecrement toPostfixDecrement() {
-		return new ExpressionMatrixIndexPostfixDecrement(matrix, row,
-				column);
+		return new ExpressionMatrixIndexPostfixDecrement(matrix, row, column);
 	}
 	
 	@Override
 	public ExpressionMatrixIndexPostfixIncrement toPostfixIncrement() {
-		return new ExpressionMatrixIndexPostfixIncrement(matrix, row,
-				column);
+		return new ExpressionMatrixIndexPostfixIncrement(matrix, row, column);
 	}
 	
 	@Override
 	public ExpressionMatrixIndexPrefixDecrement toPrefixDecrement() {
-		return new ExpressionMatrixIndexPrefixDecrement(matrix, row,
-				column);
+		return new ExpressionMatrixIndexPrefixDecrement(matrix, row, column);
 	}
 	
 	@Override
 	public ExpressionMatrixIndexPrefixIncrement toPrefixIncrement() {
-		return new ExpressionMatrixIndexPrefixIncrement(matrix, row,
-				column);
+		return new ExpressionMatrixIndexPrefixIncrement(matrix, row, column);
 	}
 	
 	public final String getNameString(boolean useLastRowColumn) {
@@ -140,8 +139,7 @@ public class ExpressionMatrixIndex implements ExpressionReferenceable {
 	
 	@Override
 	public String toString() {
-		return "MatrixIndex{matrix=%s,row=%s,column=%s}".format(matrix,
-				row, column);
+		return "MatrixIndex{matrix=%s,row=%s,column=%s}".format(matrix, row, column);
 	}
 	
 	@Override

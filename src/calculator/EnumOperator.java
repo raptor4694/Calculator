@@ -2,6 +2,7 @@ package calculator;
 
 import static calculator.Functions.*;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -157,136 +158,186 @@ public enum EnumOperator implements Function {
 			Method method;
 			if (elementWise || (method =
 					MethodFunction.dispatch(function.methods, args)) == null) {
-				method = MethodFunction.dispatch(function.methods, Real.ZERO,
-						Real.ZERO);
+				method = MethodFunction.dispatch(function.methods,
+						baseComponentTypeValue(args[0]),
+						baseComponentTypeValue(args[0]));
 				if (method != null) {
-					if (args[0] instanceof Number[]) {
-						Number[] array = (Number[]) args[0];
-						check(array.length > 0, DimensionError.class);
+					if (args[0] instanceof Object[][]) {
+						Object[][] matrix = (Object[][]) args[0];
+						check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
+								DimensionError.class);
 						
-						if (args[1] instanceof Number) {
-							Number value = (Number) args[1];
-							Number[] result = new Number[array.length];
-							
-							for (int i = 0; i < result.length; i++)
-								result[i] = toNumber(
-										method.invoke(null, array[i], value));
-							return result;
-						} else if (args[1] instanceof Number[]) {
-							Number[] array2 = (Number[]) args[1];
-							check(array.length == array2.length,
+						if (args[1] instanceof Object[][]) {
+							Object[][] matrix2 = (Object[][]) args[1];
+							check(rowCount(matrix) == rowCount(matrix2)
+									&& columnCount(matrix) == columnCount(matrix2),
 									DimensionError.class);
-							
-							Number[] result = new Number[array.length];
-							
-							for (int i = 0; i < array.length; i++)
-								result[i] = toNumber(
-										method.invoke(null, array[i], array2[i]));
-							
-							return result;
-						} else if (args[1] instanceof Number[][]) {
-							Number[][] matrix = (Number[][]) args[1];
-							check(array.length == matrix[0].length,
-									DimensionError.class);
-							
-							Number[][] result = new Number[rowCount(
-									matrix)][columnCount(matrix)];
+							Object[][] result = (Object[][]) Array.newInstance(
+									baseComponentType(matrix.getClass()),
+									rowCount(matrix), columnCount(matrix));
 							
 							for (int r = 0; r < rowCount(matrix); r++) {
 								for (int c = 0; c < columnCount(matrix); c++) {
-									result[r][c] = toNumber(method.invoke(null,
-											array[c], matrix[r][c]));
+									try {
+										result[r][c] = evalValue(method.invoke(null,
+												matrix[r][c], matrix2[r][c]));
+									} catch (ArrayStoreException e) {
+										throw new TypeError(e);
+									}
+								}
+							}
+							return result;
+						} else if (args[1] instanceof Object[]) {
+							Object[] array = (Object[]) args[1];
+							check(array.length == matrix[0].length,
+									DimensionError.class);
+							
+							Object[][] result = (Object[][]) Array.newInstance(
+									baseComponentType(matrix.getClass()),
+									rowCount(matrix), columnCount(matrix));
+							
+							for (int r = 0; r < rowCount(matrix); r++) {
+								for (int c = 0; c < columnCount(matrix); c++) {
+									try {
+										result[r][c] = evalValue(method.invoke(null,
+												matrix[r][c], array[c]));
+									} catch (ArrayStoreException e) {
+										throw new TypeError(e);
+									}
+								}
+							}
+							return result;
+						} else {
+							Object value = args[1];
+							
+							Object[][] result = (Object[][]) Array.newInstance(
+									baseComponentType(matrix.getClass()),
+									rowCount(matrix), columnCount(matrix));
+							
+							for (int r = 0; r < rowCount(matrix); r++) {
+								for (int c = 0; c < columnCount(matrix); c++) {
+									try {
+										result[r][c] = evalValue(method.invoke(null,
+												matrix[r][c], value));
+									} catch (ArrayStoreException e) {
+										throw new TypeError(e);
+									}
 								}
 							}
 							return result;
 						}
-					} else if (args[0] instanceof Number) {
-						Number value = (Number) args[0];
-						if (args[1] instanceof Number[]) {
-							Number[] array = (Number[]) args[1];
+					} else if (args[0] instanceof Object[]) {
+						Object[] array = (Object[]) args[0];
+						check(array.length > 0, DimensionError.class);
+						
+						if (args[1] instanceof Object[][]) {
+							Object[][] matrix = (Object[][]) args[1];
+							check(array.length == matrix[0].length,
+									DimensionError.class);
+							
+							Object[][] result = (Object[][]) Array.newInstance(
+									baseComponentType(matrix.getClass()),
+									rowCount(matrix), columnCount(matrix));
+							
+							for (int r = 0; r < rowCount(matrix); r++) {
+								for (int c = 0; c < columnCount(matrix); c++) {
+									try {
+										result[r][c] = evalValue(method.invoke(null,
+												array[c], matrix[r][c]));
+									} catch (ArrayStoreException e) {
+										throw new TypeError(e);
+									}
+								}
+							}
+							return result;
+						} else if (args[1] instanceof Object[]) {
+							Object[] array2 = (Object[]) args[1];
+							check(array.length == array2.length,
+									DimensionError.class);
+							
+							Object[] result = (Object[]) Array.newInstance(
+									array.getClass().getComponentType(),
+									array.length);// new Number[array.length];
+							
+							for (int i = 0; i < array.length; i++)
+								try {
+									result[i] = evalValue(method.invoke(null,
+											array[i], array2[i]));
+								} catch (ArrayStoreException e) {
+									throw new TypeError(e);
+								}
+							
+							return result;
+						} else {
+							Object value = args[1];
+							Object[] result = (Object[]) Array.newInstance(
+									array.getClass().getComponentType(),
+									array.length);// new Number[array.length];
+							
+							for (int i = 0; i < result.length; i++)
+								try {
+									result[i] = evalValue(
+											method.invoke(null, array[i], value));
+								} catch (ArrayStoreException e) {
+									throw new TypeError(e);
+								}
+							return result;
+						}
+					} else {
+						Object value = args[0];
+						if (args[1] instanceof Object[]) {
+							Object[] array = (Object[]) args[1];
 							check(array.length > 0, DimensionError.class);
 							
-							Number[] result = new Number[array.length];
+							Object[] result = (Object[]) Array.newInstance(
+									array.getClass().getComponentType(),
+									array.length);// new Number[array.length];
 							
 							for (int i = 0; i < result.length; i++) {
 								try {
-									result[i] = toNumber(
+									result[i] = evalValue(
 											method.invoke(null, value, array[i]));
 								} catch (IllegalArgumentException e) {
 									if (e.getMessage().equals(
 											"argument type mismatch")) {
 										throw new TypeError(e);
 									}
+									throw e;
+								} catch (ArrayStoreException e) {
+									throw new TypeError(e);
 								}
 							}
 							return result;
-						} else if (args[1] instanceof Number[][]) {
-							Number[][] matrix = (Number[][]) args[1];
+						} else if (args[1] instanceof Object[][]) {
+							Object[][] matrix = (Object[][]) args[1];
 							check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
 									DimensionError.class);
 							
-							Number[][] result = new Number[rowCount(
-									matrix)][columnCount(matrix)];
+							Object[][] result = (Object[][]) Array.newInstance(
+									baseComponentType(matrix.getClass()),
+									rowCount(matrix), columnCount(matrix));
 							
 							for (int r = 0; r < rowCount(matrix); r++) {
 								for (int c = 0; c < columnCount(matrix); c++) {
-									result[r][c] = toNumber(method.invoke(null,
-											value, matrix[r][c]));
+									try {
+										result[r][c] = evalValue(method.invoke(null,
+												value, matrix[r][c]));
+									} catch (ArrayStoreException e) {
+										throw new TypeError(e);
+									}
 								}
 							}
 							return result;
-						} else if (args[1] instanceof Number) {
-							return method.invoke(null, args);
-						}
-					} else if (args[0] instanceof Number[][]) {
-						Number[][] matrix = (Number[][]) args[0];
-						check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-								DimensionError.class);
-						
-						if (args[1] instanceof Number) {
-							Number value = (Number) args[1];
-							
-							Number[][] result = new Number[rowCount(
-									matrix)][columnCount(matrix)];
-							
-							for (int r = 0; r < rowCount(matrix); r++) {
-								for (int c = 0; c < columnCount(matrix); c++) {
-									result[r][c] = toNumber(method.invoke(null,
-											matrix[r][c], value));
+						} else {
+							try {
+								return method.invoke(null, args);
+							} catch (IllegalArgumentException e) {
+								if (e.getMessage().equals(
+										"argument type mismatch")) {
+									throw new TypeError(e);
 								}
+								throw e;
 							}
-							return result;
-						} else if (args[1] instanceof Number[]) {
-							Number[] array = (Number[]) args[1];
-							check(array.length == matrix[0].length,
-									DimensionError.class);
-							
-							Number[][] result = new Number[rowCount(
-									matrix)][columnCount(matrix)];
-							
-							for (int r = 0; r < rowCount(matrix); r++) {
-								for (int c = 0; c < columnCount(matrix); c++) {
-									result[r][c] = toNumber(method.invoke(null,
-											matrix[r][c], array[c]));
-								}
-							}
-							return result;
-						} else if (args[1] instanceof Number[][]) {
-							Number[][] matrix2 = (Number[][]) args[1];
-							check(rowCount(matrix) == rowCount(matrix2)
-									&& columnCount(matrix) == columnCount(matrix2),
-									DimensionError.class);
-							
-							Number[][] result = new Number[rowCount(
-									matrix)][columnCount(matrix)];
-							
-							for (int r = 0; r < rowCount(matrix); r++) {
-								for (int c = 0; c < columnCount(matrix); c++) {
-									result[r][c] = toNumber(method.invoke(null,
-											matrix[r][c], matrix2[r][c]));
-								}
-							}
-							return result;
 						}
 					}
 				}
@@ -302,30 +353,41 @@ public enum EnumOperator implements Function {
 			Method method;
 			if (elementWise || (method =
 					MethodFunction.dispatch(function.methods, args)) == null) {
-				method = MethodFunction.dispatch(function.methods, 0.0);
+				method = MethodFunction.dispatch(function.methods,
+						baseComponentTypeValue(args[0]));
 				if (method != null) {
-					if (args[0] instanceof Number[]) {
-						Number[] array = (Number[]) args[0];
+					if (args[0] instanceof Object[]) {
+						Object[] array = (Object[]) args[0];
 						check(array.length > 0, DimensionError.class);
 						
-						Number[] result = new Number[array.length];
+						Object[] result = (Object[]) Array.newInstance(
+								array.getClass().getComponentType(), array.length);
 						
 						for (int i = 0; i < array.length; i++)
-							result[i] = toNumber(method.invoke(null, array[i]));
+							try {
+								result[i] = evalValue(method.invoke(null, array[i]));
+							} catch (ArrayStoreException e) {
+								throw new TypeError(e);
+							}
 						
 						return result;
-					} else if (args[0] instanceof Number[][]) {
-						Number[][] matrix = (Number[][]) args[0];
+					} else if (args[0] instanceof Object[][]) {
+						Object[][] matrix = (Object[][]) args[0];
 						check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
 								DimensionError.class);
 						
-						Number[][] result =
-								new Number[rowCount(matrix)][columnCount(matrix)];
+						Object[][] result = (Object[][]) Array.newInstance(
+								baseComponentType(matrix.getClass()),
+								rowCount(matrix), columnCount(matrix));
 						
 						for (int r = 0; r < rowCount(matrix); r++) {
 							for (int c = 0; c < columnCount(matrix); c++) {
-								result[r][c] =
-										toNumber(method.invoke(null, matrix[r][c]));
+								try {
+									result[r][c] = evalValue(
+											method.invoke(null, matrix[r][c]));
+								} catch (ArrayStoreException e) {
+									throw new TypeError(e);
+								}
 							}
 						}
 						return result;
@@ -357,5 +419,28 @@ public enum EnumOperator implements Function {
 	@Override
 	public int minArgCount() {
 		return function.minArgCount();
+	}
+	
+	private static Object baseComponentTypeValue(Object obj) {
+		while (obj.getClass().isArray()) {
+			if (Array.getLength(obj) == 0) {
+				Class<?> c = baseComponentType(obj.getClass());
+				if (c == String.class)
+					return "";
+				if (c == Number.class || c == Real.class)
+					return Real.ZERO;
+				if (c == Complex.class)
+					return Complex.I;
+				throw new TypeError(obj.getClass().getSimpleName());
+			}
+			obj = Array.get(obj, 0);
+		}
+		return obj;
+	}
+	
+	private static Class<?> baseComponentType(Class<?> c) {
+		while (c.isArray())
+			c = c.getComponentType();
+		return c;
 	}
 }

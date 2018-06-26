@@ -44,12 +44,12 @@ public @UtilityClass class Printer {
 		printedLine = false;
 	}
 	
-	public void println(Number[] array) {
+	public void println(Object[] array) {
 		print(array);
 		println();
 	}
 	
-	public void print(Number[] array) {
+	public void print(Object[] array) {
 		print('{');
 		for (int i = 0; i < array.length; i++) {
 			if (i != 0)
@@ -60,12 +60,12 @@ public @UtilityClass class Printer {
 		printedLine = false;
 	}
 	
-	public void println(Number[][] matrix) {
+	public void println(Object[][] matrix) {
 		print(matrix);
 		println();
 	}
 	
-	public void print(Number[][] matrix) {
+	public void print(Object[][] matrix) {
 		print('{');
 		for (int i = 0; i < matrix.length; i++) {
 			if (i != 0)
@@ -80,11 +80,11 @@ public @UtilityClass class Printer {
 		return n.toString();
 	}
 	
-	public String toString(Number[] array) {
+	public String toString(Object[] array) {
 		return toString((Object) array);
 	}
 	
-	public String toString(Number[][] matrix) {
+	public String toString(Object[][] matrix) {
 		return toString((Object) matrix);
 	}
 	
@@ -113,10 +113,10 @@ public @UtilityClass class Printer {
 	
 	public void print(Object obj) {
 		printedLine = false;
-		if (obj instanceof Number[])
-			print((Number[]) obj);
-		else if (obj instanceof Number[][])
-			print((Number[][]) obj);
+		if (obj instanceof Object[][])
+			print((Object[][]) obj);
+		else if (obj instanceof Object[])
+			print((Object[]) obj);
 		else if (obj instanceof Number)
 			print((Number) obj);
 		else if (obj instanceof String) {

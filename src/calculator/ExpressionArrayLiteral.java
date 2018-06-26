@@ -1,5 +1,6 @@
 package calculator;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 
 import lombok.experimental.ExtensionMethod;
@@ -24,23 +25,25 @@ public class ExpressionArrayLiteral implements Expression {
 			Object obj = elems[i].eval(scope);
 			
 			if (obj instanceof java.lang.Number) {
-				obj = Real.valueOf(
-						((java.lang.Number) obj).doubleValue());
+				obj = Real.valueOf(((java.lang.Number) obj).doubleValue());
 			}
 			
-			if (obj instanceof Number[][])
+			if (obj instanceof Object[][])
 				throw new CalculatorError("too deeply-nested array");
 			if (type == null) {
 				if (obj instanceof Number)
 					type = Number.class;
 				else if (obj instanceof Number[])
 					type = Number[].class;
+				else if (obj instanceof String)
+					type = String.class;
+				else if (obj instanceof String[])
+					type = String[].class;
 				else
-					throw new TypeError(
-							obj.getClass().getSimpleName());
+					throw new TypeError(obj.getClass().getSimpleName());
 			} else if (!type.isAssignableFrom(obj.getClass())) {
-				throw new TypeError("element type: "
-						+ obj.getClass().getSimpleName());
+				throw new TypeError(
+						"element type: " + obj.getClass().getSimpleName());
 			}
 			
 			if (type == Number[].class) {
@@ -48,12 +51,17 @@ public class ExpressionArrayLiteral implements Expression {
 					size = ((Number[]) obj).length;
 				else if (size != ((Number[]) obj).length)
 					throw new DimensionError();
+			} else if (type == String[].class) {
+				if (size == -1)
+					size = ((String[]) obj).length;
+				else if (size != ((String[]) obj).length)
+					throw new DimensionError();
 			}
 			
 			objs[i] = obj;
 		}
 		
-		if (type == Number.class) {
+		/*if (type == Number.class) {
 			
 			Number[] result = new Number[objs.length];
 			
@@ -71,8 +79,22 @@ public class ExpressionArrayLiteral implements Expression {
 			
 			return result;
 		} else
-			throw new TypeError(type.getSimpleName());
+			throw new TypeError(type.getSimpleName());*/
 		
+		Object[] result = (Object[]) Array.newInstance(type, objs.length);
+		for (int i = 0; i < objs.length; i++) {
+			try {
+				if (objs[i] instanceof Object[]) {
+					result[i] = ((Object[]) type.cast(objs[i])).clone();
+				} else {
+					result[i] = type.cast(objs[i]);
+				}
+			} catch (ArrayStoreException e) {
+				throw new TypeError(e);
+			}
+		}
+		
+		return result;
 	}
 	
 	@Override
@@ -101,8 +123,7 @@ public class ExpressionArrayLiteral implements Expression {
 	
 	@Override
 	public String toString() {
-		return "ArrayLiteral{elems=%s}".format(
-				(Object) Arrays.toString(elems));
+		return "ArrayLiteral{elems=%s}".format((Object) Arrays.toString(elems));
 	}
 	
 	@Override

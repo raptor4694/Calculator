@@ -3,24 +3,23 @@ package calculator;
 import lombok.experimental.ExtensionMethod;
 
 @ExtensionMethod(String.class)
-public class ExpressionMatrixIndexPostfixIncrement extends
-		ExpressionMatrixIndex implements ExpressionPostfixIncrement {
+public class ExpressionMatrixIndexPostfixIncrement extends ExpressionMatrixIndex
+		implements ExpressionPostfixIncrement {
 	
-	public ExpressionMatrixIndexPostfixIncrement(Expression matrix,
-			Expression row, Expression column) {
+	public ExpressionMatrixIndexPostfixIncrement(Expression matrix, Expression row,
+			Expression column) {
 		super(matrix, row, column);
 	}
 	
 	@Override
 	public String toCompiledString() {
-		return "<%s[%s, %s] INC>".format(
-				(Object) matrix.toCompiledString(),
+		return "<%s[%s, %s] INC>".format((Object) matrix.toCompiledString(),
 				row.toCompiledString(), column.toCompiledString());
 	}
 	
 	@Override
 	public Object eval(Scope scope) {
-		Number[][] matrix = evalReference(scope);
+		Number[][] matrix = evalNumberReference(scope);
 		int row = lastRow - 1, column = lastColumn - 1;
 		Number last = matrix[row][column];
 		matrix[row][column] = last.plus(Real.ONE);

@@ -2,6 +2,7 @@ package calculator;
 
 import static calculator.Functions.*;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -24,8 +25,7 @@ public class ExpressionDimAssign implements ExpressionNamed {
 		return scope::getVariable;
 	}
 	
-	protected BiConsumer<String, Object> getSetVariableFunction(
-			Scope scope) {
+	protected BiConsumer<String, Object> getSetVariableFunction(Scope scope) {
 		return scope::setVariable;
 	}
 	
@@ -34,84 +34,13 @@ public class ExpressionDimAssign implements ExpressionNamed {
 		Predicate<String> hasVariable = getHasVariableFunction(scope);
 		java.util.function.Function<String, Object> getVariable =
 				getGetVariableFunction(scope);
-		BiConsumer<String, Object> setVariable =
-				getSetVariableFunction(scope);
+		BiConsumer<String, Object> setVariable = getSetVariableFunction(scope);
 		
 		if (hasVariable.test(variable)) {
 			Object arrayObj = getVariable.apply(variable);
 			
-			if (arrayObj instanceof Number) {
-				Number num = (Number) arrayObj;
-				
-				final Object obj = value.eval(scope);
-				
-				if (obj instanceof Real) {
-					check(isInt((Real) obj), TypeError.class);
-					
-					int i = ((Real) obj).intValue();
-					
-					check(i >= 0, DimensionError.class);
-					
-					Number[] result = new Number[i];
-					
-					Arrays.fill(result, Real.ZERO);
-					
-					result[0] = num;
-					
-					setVariable.accept(variable, result);
-					
-				} else if (obj instanceof Number[]) {
-					Number[] sizeArr = (Number[]) obj;
-					check(sizeArr.length == 2, DimensionError.class);
-					check(sizeArr[0] instanceof Real, TypeError.class);
-					check(sizeArr[1] instanceof Real, TypeError.class);
-					check(isInt(sizeArr[0]), TypeError.class);
-					check(isInt(sizeArr[1]), TypeError.class);
-					
-					int rows = ((Real) sizeArr[0]).intValue();
-					int columns = ((Real) sizeArr[1]).intValue();
-					
-					check(rows > 0, DimensionError.class);
-					check(columns > 0, DimensionError.class);
-					
-					Number[][] result = new Number[rows][columns];
-					
-					for (int r = 0; r < rows; r++)
-						Arrays.fill(result[r], Real.ZERO);
-					
-					result[0][0] = num;
-					
-					setVariable.accept(variable, result);
-				} else
-					throw new TypeError();
-				
-				return obj;
-			} else if (arrayObj instanceof Number[]) {
-				Number[] array = (Number[]) arrayObj;
-				
-				final Object obj = value.eval(scope);
-				
-				check(obj instanceof Real, TypeError.class);
-				check(isInt((Real) obj), TypeError.class);
-				
-				int i = ((Real) obj).intValue();
-				
-				check(i >= 0, DimensionError.class);
-				
-				Number[] result = new Number[i];
-				
-				System.arraycopy(array, 0, result, 0,
-						Math.min(i, array.length));
-				
-				if (i > array.length) {
-					Arrays.fill(result, array.length, i, Real.ZERO);
-				}
-				
-				setVariable.accept(variable, result);
-				
-				return obj;
-			} else if (arrayObj instanceof Number[][]) {
-				Number[][] matrix = (Number[][]) arrayObj;
+			if (arrayObj instanceof Object[][]) {
+				Object[][] matrix = (Object[][]) arrayObj;
 				
 				final Object obj = value.eval(scope);
 				
@@ -133,16 +62,26 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				int columnCount = columnCount(matrix);
 				
 				if (rows < rowCount(matrix)) {
-					Number[][] result = new Number[rows][];
+					Object[][] result = (Object[][]) Array.newInstance(
+							arrayObj.getClass().getComponentType(), rows);
 					System.arraycopy(matrix, 0, result, 0, rows);
 					matrix = result;
 				} else if (rows > rowCount(matrix)) {
-					Number[][] result = new Number[rows][];
-					System.arraycopy(matrix, 0, result, 0,
-							matrix.length);
+					Object[][] result = (Object[][]) Array.newInstance(
+							arrayObj.getClass().getComponentType(), rows);
+					
+					System.arraycopy(matrix, 0, result, 0, matrix.length);
+					Object initialValue;
+					if (matrix instanceof String[][])
+						initialValue = "";
+					else if (matrix instanceof Number[][])
+						initialValue = Real.ZERO;
+					else
+						throw new TypeError();
 					for (int i = 0; i < rows; i++) {
-						Arrays.fill(matrix[i] = new Number[columns],
-								Real.ZERO);
+						Arrays.fill(matrix[i] = (Object[]) Array.newInstance(
+								arrayObj.getClass().getComponentType().getComponentType(),
+								columns), initialValue);
 					}
 					matrix = result;
 				}
@@ -150,20 +89,27 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				if (columns > columnCount) {
 					for (int r = 0; r < rows; r++) {
 						if (matrix[r].length != columns) {
-							Number[] n = new Number[columns];
+							Object[] n = (Object[]) Array.newInstance(
+									matrix[r].getClass().getComponentType(),
+									columns);
 							int length = matrix[r].length;
-							System.arraycopy(matrix[r], 0, n, 0,
-									length);
-							Arrays.fill(n, length, columns, Real.ZERO);
+							System.arraycopy(matrix[r], 0, n, 0, length);
+							if (n instanceof Number[])
+								Arrays.fill(n, length, columns, Real.ZERO);
+							else if (n instanceof String[])
+								Arrays.fill(n, length, columns, "");
+							else
+								throw new TypeError();
 							matrix[r] = n;
 						}
 					}
 				} else if (columns < columnCount(matrix)) {
 					for (int r = 0; r < rows; r++) {
 						if (matrix[r].length != columns) {
-							Number[] n = new Number[columns];
-							System.arraycopy(matrix[r], 0, n, 0,
+							Object[] n = (Object[]) Array.newInstance(
+									matrix[r].getClass().getComponentType(),
 									columns);
+							System.arraycopy(matrix[r], 0, n, 0, columns);
 							matrix[r] = n;
 						}
 					}
@@ -172,9 +118,103 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				setVariable.accept(variable, matrix);
 				
 				return obj;
-			} else
-				throw new TypeError(
-						arrayObj.getClass().getSimpleName().toLowerCase());
+			} else if (arrayObj instanceof Object[]) {
+				Object[] array = (Object[]) arrayObj;
+				
+				final Object obj = value.eval(scope);
+				
+				check(obj instanceof Real, TypeError.class);
+				check(isInt((Real) obj), TypeError.class);
+				
+				int i = ((Real) obj).intValue();
+				
+				check(i >= 0, DimensionError.class);
+				
+				Object[] result = (Object[]) Array.newInstance(
+						array.getClass().getComponentType(), i);
+				
+				System.arraycopy(array, 0, result, 0, Math.min(i, array.length));
+				
+				if (i > array.length) {
+					if (array instanceof String[])
+						Arrays.fill(result, array.length, i, "");
+					else if (array instanceof Number[])
+						Arrays.fill(result, array.length, i, Real.ZERO);
+					else
+						throw new TypeError();
+				}
+				
+				setVariable.accept(variable, result);
+				
+				return obj;
+			} else {
+				
+				final Object obj = value.eval(scope);
+				
+				if (obj instanceof Real) {
+					check(isInt((Real) obj), TypeError.class);
+					
+					int i = ((Real) obj).intValue();
+					
+					check(i >= 0, DimensionError.class);
+					
+					if (arrayObj instanceof Number) {
+						Number[] result = new Number[i];
+						
+						Arrays.fill(result, Real.ZERO);
+						
+						result[0] = (Number) arrayObj;
+						
+						setVariable.accept(variable, result);
+					} else if (arrayObj instanceof String) {
+						String[] result = new String[i];
+						
+						Arrays.fill(result, "");
+						
+						result[0] = (String) arrayObj;
+						
+						setVariable.accept(variable, result);
+					} else
+						throw new TypeError();
+				} else if (obj instanceof Number[]) {
+					Number[] sizeArr = (Number[]) obj;
+					check(sizeArr.length == 2, DimensionError.class);
+					check(sizeArr[0] instanceof Real, TypeError.class);
+					check(sizeArr[1] instanceof Real, TypeError.class);
+					check(isInt(sizeArr[0]), TypeError.class);
+					check(isInt(sizeArr[1]), TypeError.class);
+					
+					int rows = ((Real) sizeArr[0]).intValue();
+					int columns = ((Real) sizeArr[1]).intValue();
+					
+					check(rows > 0, DimensionError.class);
+					check(columns > 0, DimensionError.class);
+					
+					if (arrayObj instanceof Number) {
+						Number[][] result = new Number[rows][columns];
+						
+						for (int r = 0; r < rows; r++)
+							Arrays.fill(result[r], Real.ZERO);
+						
+						result[0][0] = (Number) arrayObj;
+						
+						setVariable.accept(variable, result);
+					} else if (arrayObj instanceof String) {
+						String[][] result = new String[rows][columns];
+						
+						for (int r = 0; r < rows; r++)
+							Arrays.fill(result[r], "");
+						
+						result[0][0] = (String) arrayObj;
+						
+						setVariable.accept(variable, result);
+					} else
+						throw new TypeError();
+				} else
+					throw new TypeError();
+				
+				return obj;
+			}
 		} else {
 			Object obj = value.eval(scope);
 			if (obj instanceof Real) {
@@ -234,8 +274,8 @@ public class ExpressionDimAssign implements ExpressionNamed {
 	
 	@Override
 	public String toString() {
-		return "DimAssign{variable=\"%s\",value=%s}".format(
-				(Object) variable, value);
+		return "DimAssign{variable=\"%s\",value=%s}".format((Object) variable,
+				value);
 	}
 	
 	@Override

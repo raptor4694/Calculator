@@ -3,6 +3,7 @@ package calculator;
 import static calculator.Operations.*;
 import static calculator.Operators.*;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -17,9 +18,10 @@ public @UtilityClass class Functions {
 	private Random rand = new Random();
 	
 	public final int TYPE_REAL = 0, TYPE_COMPLEX = 1, TYPE_ARRAY = 2,
-			TYPE_MATRIX = 3, TYPE_FUNCTION = 4, TYPE_STRING = 5;
+			TYPE_MATRIX = 3, TYPE_FUNCTION = 4, TYPE_STRING = 5,
+			TYPE_STRING_ARRAY = 6, TYPE_2D_STRING_ARRAY = 7;
 	
-	@func("returns type of argument: 0 = real, 1 = complex, 2 = array, 3 = matrix, 4 = function, 5 = string")
+	@func("returns type of argument: 0 = real, 1 = complex, 2 = number array, 3 = number matrix, 4 = function, 5 = string, 6 = string array, 7 = 2-dimensional string array")
 	public int typeof(Real d) {
 		return TYPE_REAL;
 	}
@@ -49,6 +51,16 @@ public @UtilityClass class Functions {
 		return TYPE_STRING;
 	}
 	
+	@func
+	public int typeof(String[] a) {
+		return TYPE_STRING_ARRAY;
+	}
+	
+	@func
+	public int typeof(String[][] a) {
+		return TYPE_2D_STRING_ARRAY;
+	}
+	
 	@func("import a Java function via fully-qualified name string")
 	public Function _import(String s) {
 		int i = s.lastIndexOf('.');
@@ -57,8 +69,7 @@ public @UtilityClass class Functions {
 		String className = s.substring(0, i);
 		String funcName = s.substring(i + 1);
 		try {
-			return new MethodFunction(Class.forName(className),
-					funcName);
+			return new MethodFunction(Class.forName(className), funcName);
 		} catch (ClassNotFoundException e) {
 			throw new CalculatorError(e.getMessage(), e);
 		}
@@ -67,12 +78,16 @@ public @UtilityClass class Functions {
 	/////// SIZE ///////
 	
 	@func("size of array")
-	public Number dim(Number[] array) {
+	public Number dim(Object[] array) {
 		return Real.valueOf(array.length);
 	}
 	
+	/*public Number dim(String[] array) {
+		return Real.valueOf(array.length);
+	}*/
+	
 	@func("size of matrix {rows, columns}")
-	public Number[] dim(Number[][] matrix) {
+	public Number[] dim(Object[][] matrix) {
 		return new Number[] {	Real.valueOf(rowCount(matrix)),
 								Real.valueOf(columnCount(matrix))};
 	}
@@ -122,8 +137,7 @@ public @UtilityClass class Functions {
 		return rand.nextInt(castInt(upper));
 	}
 	
-	public int randInt(@param("lower") Real lower,
-			@param("upper") Real upper) {
+	public int randInt(@param("lower") Real lower, @param("upper") Real upper) {
 		check(isInt(lower), TypeError.class);
 		check(isInt(upper), TypeError.class);
 		
@@ -155,8 +169,7 @@ public @UtilityClass class Functions {
 		return result;
 	}
 	
-	public Number[] randBin(@param("size") Number size,
-			@param("lower") Number lower,
+	public Number[] randBin(@param("size") Number size, @param("lower") Number lower,
 			@param("upper") Number upper) {
 		check(isInt(size), TypeError.class);
 		check(isInt(lower), TypeError.class);
@@ -165,8 +178,7 @@ public @UtilityClass class Functions {
 		int upperInt = castInt(upper) - lowerInt;
 		Number[] result = new Number[castInt(size)];
 		for (int i = 0; i < result.length; i++) {
-			result[i] =
-					Real.valueOf(rand.nextInt(upperInt) + lowerInt);
+			result[i] = Real.valueOf(rand.nextInt(upperInt) + lowerInt);
 		}
 		return result;
 	}
@@ -191,8 +203,7 @@ public @UtilityClass class Functions {
 	
 	@func("returns a matrix of random integers")
 	public Number[][] randM(@param("rows") Number rows,
-			@param("columns") Number columns,
-			@param("bound") Number bound) {
+			@param("columns") Number columns, @param("bound") Number bound) {
 		check(isInt(rows), TypeError.class);
 		check(isInt(columns), TypeError.class);
 		check(isInt(bound), TypeError.class);
@@ -211,13 +222,15 @@ public @UtilityClass class Functions {
 	}
 	
 	@func("copies an array")
-	public Number[] copy(Number[] array) {
+	public Object[] copy(Object[] array) {
 		return array.clone();
 	}
 	
 	@func("copies a matrix")
-	public Number[][] copy(Number[][] matrix) {
-		Number[][] result = new Number[rowCount(matrix)][];
+	public Object[][] copy(Object[][] matrix) {
+		Object[][] result =
+				(Object[][]) Array.newInstance(matrix.getClass().getComponentType(),
+						rowCount(matrix));
 		for (int r = 0; r < rowCount(matrix); r++) {
 			result[r] = matrix[r].clone();
 		}
@@ -225,6 +238,52 @@ public @UtilityClass class Functions {
 	}
 	
 	//////// SET OPERATIONS ////////
+	
+	@func("appends the value to the end of a copy of the set")
+	public Number[] append(Number[] set, Number n) {
+		Number[] result = new Number[set.length + 1];
+		System.arraycopy(set, 0, result, 0, set.length);
+		result[set.length] = n;
+		return result;
+	}
+	
+	@func
+	public String[] append(Number[] set, String s) {
+		if (set.length != 0)
+			throw new TypeError();
+		return new String[] {s};
+	}
+	
+	@func
+	public String[] append(String[] set, String s) {
+		String[] result = new String[set.length + 1];
+		System.arraycopy(set, 0, result, 0, set.length);
+		result[set.length] = s;
+		return result;
+	}
+	
+	@func("appends the second set to the end of a copy of the first set")
+	public Number[] append(Number[] set, Number[] set2) {
+		Number[] result = new Number[set.length + set2.length];
+		System.arraycopy(set, 0, result, 0, set.length);
+		System.arraycopy(set2, 0, result, set.length, set2.length);
+		return result;
+	}
+	
+	@func
+	public String[] append(Number[] set, String[] set2) {
+		if (set.length != 0)
+			throw new TypeError();
+		return set2.clone();
+	}
+	
+	@func
+	public String[] append(String[] set, String[] set2) {
+		String[] result = new String[set.length + set2.length];
+		System.arraycopy(set, 0, result, 0, set.length);
+		System.arraycopy(set2, 0, result, set.length, set2.length);
+		return result;
+	}
 	
 	@func("sample variance (square of standard deviation)")
 	public Number variance(Number[] set) {
@@ -382,9 +441,13 @@ public @UtilityClass class Functions {
 		return indexOf0(set, value, set.length) + 1;
 	}
 	
-	int indexOf0(Number[] set, Number value, int length) {
+	public int indexOf(String[] set, String value) {
+		return indexOf0(set, value, set.length) + 1;
+	}
+	
+	<T> int indexOf0(T[] set, T value, int length) {
 		for (int i = 0; i < length; i++) {
-			if (set[i] == value)
+			if (set[i].equals(value))
 				return i;
 		}
 		return -1;
@@ -393,12 +456,12 @@ public @UtilityClass class Functions {
 	//////// MATRIX OPERATIONS ////////
 	
 	@func("get number of rows in matrix")
-	public int rowCount(Number[][] matrix) {
+	public int rowCount(Object[][] matrix) {
 		return matrix.length;
 	}
 	
 	@func("get number of columns in matrix")
-	public int columnCount(Number[][] matrix) {
+	public int columnCount(Object[][] matrix) {
 		return matrix[0].length;
 	}
 	
@@ -433,10 +496,8 @@ public @UtilityClass class Functions {
 			
 			Number factor = multiply(a, d).minus(multiply(b, c));
 			
-			return new Number[][] {	{d.divide(factor),
-									b.negate().divide(factor)},
-									{	c.negate().divide(factor),
-										a.divide(factor)}};
+			return new Number[][] {	{d.divide(factor), b.negate().divide(factor)},
+									{c.negate().divide(factor), a.divide(factor)}};
 		}
 		
 		Number result[][] = new Number[n][n];
@@ -459,26 +520,24 @@ public @UtilityClass class Functions {
 				for (int k = 0; k < n; ++k) {
 					Number factor = b[index[i]][k];
 					if (factor == null) {
-						throw new NullPointerException(
-								"b[(index[" + i + "] = " + index[i]
-										+ ")][" + k + "] = null");
+						throw new NullPointerException("b[(index[" + i + "] = "
+								+ index[i] + ")][" + k + "] = null");
 					}
-					b[index[j]][k] = b[index[j]][k].minus(
-							matrix[index[j]][i].times(factor));
+					b[index[j]][k] =
+							b[index[j]][k].minus(matrix[index[j]][i].times(factor));
 				}
 			
 		// Perform backward substitutions
 		for (int i = 0; i < n; ++i) {
-			result[n - 1][i] = b[index[n - 1]][i].divide(
-					matrix[index[n - 1]][n - 1]);
+			result[n - 1][i] =
+					b[index[n - 1]][i].divide(matrix[index[n - 1]][n - 1]);
 			for (int j = n - 2; j >= 0; --j) {
 				result[j][i] = b[index[j]][i];
 				for (int k = j + 1; k < n; ++k) {
 					result[j][i] = result[j][i].minus(
 							matrix[index[j]][k].times(result[k][i]));
 				}
-				result[j][i] =
-						result[j][i].divide(matrix[index[j]][j]);
+				result[j][i] = result[j][i].divide(matrix[index[j]][j]);
 			}
 		}
 		
@@ -486,8 +545,7 @@ public @UtilityClass class Functions {
 		for (int r = 0; r < n; r++) {
 			for (int c = 0; c < n; c++) {
 				if (result[r][c] instanceof Real) {
-					result[r][c] = Real.valueOf(
-							round((Real) result[r][c], 14));
+					result[r][c] = Real.valueOf(round((Real) result[r][c], 14));
 				}
 			}
 		}
@@ -542,15 +600,14 @@ public @UtilityClass class Functions {
 				
 				// Modify other elements accordingly
 				for (int l = j + 1; l < n; ++l)
-					a[index[i]][l] = a[index[i]][l].minus(
-							pj.times(a[index[j]][l]));
+					a[index[i]][l] = a[index[i]][l].minus(pj.times(a[index[j]][l]));
 			}
 		}
 	}
 	
 	@func("reduced row echelon form")
 	public Number[][] rref(Number[][] matrix) {
-		matrix = copy(matrix);
+		matrix = (Number[][]) copy(matrix);
 		
 		final int rowCount = rowCount(matrix);
 		final int columnCount = columnCount(matrix);
@@ -581,8 +638,7 @@ public @UtilityClass class Functions {
 				if (j != r) {
 					Number sub = matrix[j][lead];
 					for (int k = 0; k < columnCount; k++)
-						matrix[j][k] = matrix[j][k].minus(
-								sub.times(matrix[r][k]));
+						matrix[j][k] = matrix[j][k].minus(sub.times(matrix[r][k]));
 				}
 			}
 			lead++;
@@ -627,8 +683,7 @@ public @UtilityClass class Functions {
 			boolean subtract = false;
 			Number sum = Real.ZERO;
 			for (int i = 0; i < matrix.length; i++) {
-				Number d = multiply(matrix[0][i],
-						det(minor(matrix, 0, i)));
+				Number d = multiply(matrix[0][i], det(minor(matrix, 0, i)));
 				if (subtract)
 					sum = sum.minus(d);
 				else
@@ -651,8 +706,7 @@ public @UtilityClass class Functions {
 		default:
 			Number sum = Real.ZERO;
 			for (int i = 0; i < matrix.length; i++)
-				sum = add(sum, multiply(matrix[0][i],
-						perm(minor(matrix, 0, i))));
+				sum = add(sum, multiply(matrix[0][i], perm(minor(matrix, 0, i))));
 			return sum;
 		}
 	}
@@ -663,8 +717,7 @@ public @UtilityClass class Functions {
 	public Number gcd(@param("int") Number a, @param("int") Number b) {
 		check(areInts(a, b), TypeError.class);
 		
-		return Real.valueOf(
-				gcd(((Real) a).intValue(), ((Real) b).intValue()));
+		return Real.valueOf(gcd(((Real) a).intValue(), ((Real) b).intValue()));
 	}
 	
 	private int gcd(int a, int b) {
@@ -681,8 +734,7 @@ public @UtilityClass class Functions {
 	public Number lcm(@param("int") Number a, @param("int") Number b) {
 		check(areInts(a, b), TypeError.class);
 		
-		return Real.valueOf(
-				lcm(((Real) a).intValue(), ((Real) b).intValue()));
+		return Real.valueOf(lcm(((Real) a).intValue(), ((Real) b).intValue()));
 	}
 	
 	private int lcm(int m, int n) {
@@ -715,8 +767,7 @@ public @UtilityClass class Functions {
 		check(isInt(numDecimals), TypeError.class);
 		check(numDecimals.value >= 0, DimensionError.class);
 		BigDecimal bd = BigDecimal.valueOf(d.value);
-		return bd.round(new MathContext(
-				castInt(numDecimals) + 1)).doubleValue();
+		return bd.round(new MathContext(castInt(numDecimals) + 1)).doubleValue();
 	}
 	
 	double round(Real d, int numDecimals) {
@@ -866,20 +917,18 @@ public @UtilityClass class Functions {
 	
 	@func("inverse hyperbolic sine")
 	public Number asinh(Real d) {
-		return Real.valueOf(
-				Math.log(Math.sqrt(d.value * d.value + 1) + d.value));
+		return Real.valueOf(Math.log(Math.sqrt(d.value * d.value + 1) + d.value));
 	}
 	
 	@func("inverse hyperbolic cosine")
 	public Number acosh(Real d) {
-		return Real.valueOf(Math.log(d.value
-				+ Math.sqrt(d.value - 1) * Math.sqrt(d.value + 1)));
+		return Real.valueOf(
+				Math.log(d.value + Math.sqrt(d.value - 1) * Math.sqrt(d.value + 1)));
 	}
 	
 	@func("inverse hyperbolic tangent")
 	public Number atanh(Real d) {
-		return Real.valueOf(
-				0.5 * (Math.log(d.value + 1) - Math.log(1 - d.value)));
+		return Real.valueOf(0.5 * (Math.log(d.value + 1) - Math.log(1 - d.value)));
 	}
 	
 	@func("exact inverse hyperbolic tanget")
@@ -1913,15 +1962,13 @@ public @UtilityClass class Functions {
 	}
 	
 	@SneakyThrows
-	void check(boolean condition,
-			Class<? extends CalculatorError> errorType) {
+	void check(boolean condition, Class<? extends CalculatorError> errorType) {
 		if (!condition)
 			throw errorType.newInstance();
 	}
 	
 	@SneakyThrows
-	void check(boolean condition,
-			Class<? extends CalculatorError> errorType,
+	void check(boolean condition, Class<? extends CalculatorError> errorType,
 			Object... args) {
 		if (!condition) {
 			Class<?>[] parameterTypes = new Class<?>[args.length];
@@ -1989,35 +2036,50 @@ public @UtilityClass class Functions {
 		return c.real != 0.0 || c.imag != 0.0;
 	}
 	
-	boolean toBoolean(Number[] array) {
+	boolean toBoolean(Object[] array) {
 		if (array.length == 0)
 			return false;
-		for (Number d : array)
+		for (Object d : array)
 			if (toBoolean(d))
 				return true;
 		return false;
 	}
 	
-	boolean toBoolean(Number[][] matrix) {
+	boolean toBoolean(Object[][] matrix) {
 		if (matrix.length == 0)
 			return false;
-		for (Number[] array : matrix) {
+		for (Object[] array : matrix) {
 			if (toBoolean(array))
 				return true;
 		}
 		return false;
 	}
 	
+	boolean toBoolean(String s) {
+		return !s.isEmpty();
+	}
+	
 	boolean toBoolean(Object obj) {
 		if (obj instanceof Number)
 			return toBoolean((Number) obj);
-		else if (obj instanceof Number[])
-			return toBoolean((Number[]) obj);
-		else if (obj instanceof Number[][])
-			return toBoolean((Number[][]) obj);
+		else if (obj instanceof Object[][])
+			return toBoolean((Object[][]) obj);
+		else if (obj instanceof Object[])
+			return toBoolean((Object[]) obj);
+		else if (obj instanceof String)
+			return toBoolean((String) obj);
 		else if (obj instanceof Function)
 			return true;
 		else
 			throw new TypeError(obj.getClass().getSimpleName());
+	}
+	
+	Object evalValue(Object obj) {
+		if (obj instanceof java.lang.Number)
+			return Real.valueOf(((java.lang.Number) obj).doubleValue());
+		else if (obj instanceof Boolean)
+			return toNumber((Boolean) obj);
+		else
+			return obj;
 	}
 }

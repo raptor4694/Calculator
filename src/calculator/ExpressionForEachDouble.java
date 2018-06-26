@@ -31,21 +31,21 @@ public class ExpressionForEachDouble implements Expression {
 		
 		Object last = null;
 		
-		if (obj instanceof Number[]) {
-			Number[] array = (Number[]) obj;
-			
-			for (int i = 0; i < array.length; i++) {
-				last = evalBody(scope, evalValueFunction,
-						Real.valueOf(i + 1), array[i]);
-			}
-		} else if (obj instanceof Number[][]) {
-			Number[][] matrix = (Number[][]) obj;
+		if (obj instanceof Object[][]) {
+			Object[][] matrix = (Object[][]) obj;
 			
 			for (int r = 0; r < rowCount(matrix); r++) {
 				for (int c = 0; c < columnCount(matrix); c++) {
-					last = evalBody(scope, evalValueFunction,
-							Real.valueOf(r + 1), Real.valueOf(c + 1));
+					last = evalBody(scope, evalValueFunction, Real.valueOf(r + 1),
+							Real.valueOf(c + 1));
 				}
+			}
+		} else if (obj instanceof Object[]) {
+			Object[] array = (Object[]) obj;
+			
+			for (int i = 0; i < array.length; i++) {
+				last = evalBody(scope, evalValueFunction, Real.valueOf(i + 1),
+						array[i]);
 			}
 		} else
 			throw new TypeError("not a matrix");
@@ -70,18 +70,16 @@ public class ExpressionForEachDouble implements Expression {
 	
 	@Override
 	public String toEvalString() {
-		return "for(%s, %s : %s) ".format((Object) variable1,
-				variable2, array.toEvalString())
-				+ (body instanceof ExpressionMulti
-						? "{ " + body.toEvalString() + " }"
+		return "for(%s, %s : %s) ".format((Object) variable1, variable2,
+				array.toEvalString())
+				+ (body instanceof ExpressionMulti? "{ " + body.toEvalString() + " }"
 						: body.toEvalString());
 	}
 	
 	@Override
 	public String toCompiledString() {
-		return "<FOREACH2 \"%s\", \"%s\" IN %s DO %s>".format(
-				(Object) variable1, variable2,
-				array.toCompiledString(), body.toCompiledString());
+		return "<FOREACH2 \"%s\", \"%s\" IN %s DO %s>".format((Object) variable1,
+				variable2, array.toCompiledString(), body.toCompiledString());
 	}
 	
 	@Override

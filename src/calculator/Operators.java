@@ -497,8 +497,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	@func("cross product")
-	public Number[] cross(@param("vector") Number[] a,
-			@param("vector") Number[] b) {
+	public Number[] cross(@param("vector") Number[] a, @param("vector") Number[] b) {
 		check(a.length == b.length, DimensionError.class);
 		check(2 <= a.length && a.length <= 3, DimensionError.class);
 		
@@ -548,8 +547,7 @@ public @UtilityClass class Operators {
 			for (int j = 0; j < p; j++) {
 				ans[i][j] = Real.ZERO;
 				for (int k = 0; k < n; k++) {
-					ans[i][j] =
-							ans[i][j].plus(multiply(A[i][k], B[k][j]));
+					ans[i][j] = ans[i][j].plus(multiply(A[i][k], B[k][j]));
 				}
 			}
 		}
@@ -630,8 +628,7 @@ public @UtilityClass class Operators {
 			BigDecimal A = BigDecimal.valueOf(a.value);
 			BigDecimal B = BigDecimal.valueOf(b.value);
 			
-			return Real.valueOf(
-					A.remainder(B, new MathContext(15)).doubleValue());
+			return Real.valueOf(A.remainder(B, new MathContext(15)).doubleValue());
 		}
 	}
 	
@@ -653,7 +650,7 @@ public @UtilityClass class Operators {
 			
 			// optimization
 			if (exponent == 1)
-				return copy(matrix);
+				return (Number[][]) copy(matrix);
 			
 			Number[][] result = matrix;
 			
@@ -808,8 +805,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater(Number[][] matrix, Real value) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -824,8 +820,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater(Real value, Number[][] matrix) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -840,10 +835,8 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater(Number[][] A, Number[][] B) {
-		check(rowCount(A) > 0 && columnCount(A) > 0,
-				DimensionError.class);
-		check(rowCount(B) > 0 && columnCount(B) > 0,
-				DimensionError.class);
+		check(rowCount(A) > 0 && columnCount(A) > 0, DimensionError.class);
+		check(rowCount(B) > 0 && columnCount(B) > 0, DimensionError.class);
 		
 		//@formatter:off
 		for (Number[] a_arr : A)
@@ -910,8 +903,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater_equal(Number[][] matrix, Real value) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -926,8 +918,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater_equal(Real value, Number[][] matrix) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -942,10 +933,8 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater_equal(Number[][] A, Number[][] B) {
-		check(rowCount(A) > 0 && columnCount(A) > 0,
-				DimensionError.class);
-		check(rowCount(B) > 0 && columnCount(B) > 0,
-				DimensionError.class);
+		check(rowCount(A) > 0 && columnCount(A) > 0, DimensionError.class);
+		check(rowCount(B) > 0 && columnCount(B) > 0, DimensionError.class);
 		
 		//@formatter:off
 		for (Number[] a_arr : A)
@@ -1012,8 +1001,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser(Number[][] matrix, Real value) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -1028,8 +1016,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser(Real value, Number[][] matrix) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -1044,10 +1031,8 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser(Number[][] A, Number[][] B) {
-		check(rowCount(A) > 0 && columnCount(A) > 0,
-				DimensionError.class);
-		check(rowCount(B) > 0 && columnCount(B) > 0,
-				DimensionError.class);
+		check(rowCount(A) > 0 && columnCount(A) > 0, DimensionError.class);
+		check(rowCount(B) > 0 && columnCount(B) > 0, DimensionError.class);
 		
 		//@formatter:off
 		for (Number[] a_arr : A)
@@ -1115,8 +1100,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser_equal(Number[][] matrix, Real value) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -1132,8 +1116,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser_equal(Real value, Number[][] matrix) {
-		check(rowCount(matrix) > 0 && columnCount(matrix) > 0,
-				DimensionError.class);
+		check(rowCount(matrix) > 0 && columnCount(matrix) > 0, DimensionError.class);
 		
 		for (Number[] array : matrix) {
 			for (Number d : array) {
@@ -1148,10 +1131,8 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser_equal(Number[][] A, Number[][] B) {
-		check(rowCount(A) > 0 && columnCount(A) > 0,
-				DimensionError.class);
-		check(rowCount(B) > 0 && columnCount(B) > 0,
-				DimensionError.class);
+		check(rowCount(A) > 0 && columnCount(A) > 0, DimensionError.class);
+		check(rowCount(B) > 0 && columnCount(B) > 0, DimensionError.class);
 		
 		//@formatter:off
 		for (Number[] a_arr : A)
@@ -1227,8 +1208,7 @@ public @UtilityClass class Operators {
 	public Number equals(Number[][] A, Number[][] B) {
 		// check(rowCount(A) > 0 && columnCount(A) > 0, DimensionError.class);
 		// check(rowCount(B) > 0 && columnCount(B) > 0, DimensionError.class);
-		if (rowCount(A) != rowCount(B)
-				|| columnCount(A) != columnCount(B))
+		if (rowCount(A) != rowCount(B) || columnCount(A) != columnCount(B))
 			return Real.ZERO;
 		
 		for (int r = 0; r < A.length; r++) {

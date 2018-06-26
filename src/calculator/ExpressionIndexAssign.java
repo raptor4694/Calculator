@@ -15,23 +15,21 @@ public class ExpressionIndexAssign extends ExpressionIndex
 	
 	@Override
 	public String toCompiledString() {
-		return "<SET %s[%s] TO %s>".format(
-				(Object) array.toCompiledString(),
+		return "<SET %s[%s] TO %s>".format((Object) array.toCompiledString(),
 				index.toCompiledString(), value.toCompiledString());
 	}
 	
 	@Override
 	public Object eval(Scope scope) {
-		Number[] array = evalReference(scope);
+		Object[] array = evalReference(scope);
 		
 		Object obj = value.eval(scope);
 		
-		if (!(obj instanceof Number))
-			throw new TypeError();
-		
-		Number value = (Number) obj;
-		
-		return array[lastIndex - 1] = value;
+		try {
+			return array[lastIndex - 1] = obj;
+		} catch (ArrayStoreException e) {
+			throw new TypeError(e);
+		}
 	}
 	
 	@Override
@@ -41,8 +39,7 @@ public class ExpressionIndexAssign extends ExpressionIndex
 	
 	@Override
 	public String toString() {
-		return "IndexAssign{array=%s,index=%s,value=%s}".format(array,
-				index, value);
+		return "IndexAssign{array=%s,index=%s,value=%s}".format(array, index, value);
 	}
 	
 	@Override

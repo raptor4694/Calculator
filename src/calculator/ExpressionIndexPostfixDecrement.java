@@ -6,8 +6,7 @@ import lombok.experimental.ExtensionMethod;
 public class ExpressionIndexPostfixDecrement extends ExpressionIndex
 		implements ExpressionPostfixDecrement {
 	
-	public ExpressionIndexPostfixDecrement(Expression array,
-			Expression index) {
+	public ExpressionIndexPostfixDecrement(Expression array, Expression index) {
 		super(array, index);
 	}
 	
@@ -19,7 +18,7 @@ public class ExpressionIndexPostfixDecrement extends ExpressionIndex
 	
 	@Override
 	public Object eval(Scope scope) {
-		Number[] array = evalReference(scope);
+		Number[] array = evalNumberReference(scope);
 		int index = lastIndex - 1;
 		Number last = array[index];
 		array[index] = array[index].minus(Real.ONE);
@@ -33,8 +32,7 @@ public class ExpressionIndexPostfixDecrement extends ExpressionIndex
 	
 	@Override
 	public String toString() {
-		return "IndexPostfixDecrement{array=%s,index=%s}".format(array,
-				index);
+		return "IndexPostfixDecrement{array=%s,index=%s}".format(array, index);
 	}
 	
 	@Override

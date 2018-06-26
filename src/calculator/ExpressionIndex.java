@@ -27,10 +27,10 @@ public class ExpressionIndex implements ExpressionReferenceable {
 		if (obj instanceof String) {
 			evalIndex(scope, ((String) obj).length());
 			return ((String) obj).substring(lastIndex - 1, lastIndex);
-		} else if (!(obj instanceof Number[]))
+		} else if (!(obj instanceof Object[]))
 			throw new TypeError("not an array");
 		
-		Number[] array = (Number[]) obj;
+		Object[] array = (Object[]) obj;
 		evalIndex(scope, array.length);
 		
 		return array[lastIndex - 1];
@@ -51,19 +51,27 @@ public class ExpressionIndex implements ExpressionReferenceable {
 		
 	}
 	
-	public final Number[] evalReference(Scope scope) {
+	public final Object[] evalReference(Scope scope) {
 		Object obj;
 		
 		obj = array.eval(scope);
 		
-		if (!(obj instanceof Number[]))
+		if (!(obj instanceof Object[]))
 			throw new TypeError("not an array");
 		
-		Number[] array = (Number[]) obj;
+		Object[] array = (Object[]) obj;
 		
 		evalIndex(scope, array.length);
 		
 		return array;
+	}
+	
+	protected final Number[] evalNumberReference(Scope scope) {
+		Object[] result = evalReference(scope);
+		
+		check(result instanceof Number[], TypeError.class);
+		
+		return (Number[]) result;
 	}
 	
 	@Override
@@ -74,8 +82,7 @@ public class ExpressionIndex implements ExpressionReferenceable {
 	@Override
 	public ExpressionIndexAssignOp toAssignOp(EnumOperator operator,
 			Expression value) {
-		return new ExpressionIndexAssignOp(array, index, operator,
-				value);
+		return new ExpressionIndexAssignOp(array, index, operator, value);
 	}
 	
 	@Override
@@ -100,8 +107,7 @@ public class ExpressionIndex implements ExpressionReferenceable {
 	
 	public final String getNameString(boolean useLastIndex) {
 		return array.toEvalString() + "["
-				+ (useLastIndex? lastIndex : index.toEvalString())
-				+ "]";
+				+ (useLastIndex? lastIndex : index.toEvalString()) + "]";
 	}
 	
 	@Override

@@ -24,8 +24,7 @@ public class MethodFunction implements Function {
 		for (Method method : containingClass.getDeclaredMethods()) {
 			if (method.getName().equals(name)) {
 				int mods = method.getModifiers();
-				if (Modifier.isStatic(mods)
-						&& Modifier.isPublic(mods)) {
+				if (Modifier.isStatic(mods) && Modifier.isPublic(mods)) {
 					int argCount = method.getParameterCount();
 					if (minArgCount == -1 || argCount < minArgCount)
 						minArgCount = argCount;
@@ -41,8 +40,8 @@ public class MethodFunction implements Function {
 		}
 		
 		if (validMethods.isEmpty())
-			throw new RuntimeException("No method found with name "
-					+ name + " in " + containingClass);
+			throw new RuntimeException(
+					"No method found with name " + name + " in " + containingClass);
 		
 		methods = validMethods.toArray(new Method[0]);
 	}
@@ -78,10 +77,18 @@ public class MethodFunction implements Function {
 					typename = param.value();
 				} else if (type == Number.class) {
 					typename = "number";
-				} else if (type == Number[].class) {
-					typename = "array";
-				} else if (type == Number[][].class) {
+				} else if (Number[][].class.isAssignableFrom(type)) {
 					typename = "matrix";
+				} else if (Number[].class.isAssignableFrom(type)) {
+					typename = "set";
+				} else if (String[][].class.isAssignableFrom(type)) {
+					typename = "2D string array";
+				} else if (String[].class.isAssignableFrom(type)) {
+					typename = "string array";
+				} else if (Object[][].class.isAssignableFrom(type)) {
+					typename = "2D array";
+				} else if (Object[].class.isAssignableFrom(type)) {
+					typename = "array";
 				} else {
 					typename = type.getSimpleName().toLowerCase();
 				}
@@ -114,22 +121,19 @@ public class MethodFunction implements Function {
 	}
 	
 	public String getQualifiedName() {
-		return methods[0].getDeclaringClass().getName() + "."
-				+ methods[0].getName();
+		return methods[0].getDeclaringClass().getName() + "." + methods[0].getName();
 	}
 	
 	@Override
 	public String toString() {
-		return methods[0].getDeclaringClass().getName() + "."
-				+ methods[0].getName();
+		return methods[0].getDeclaringClass().getName() + "." + methods[0].getName();
 	}
 	
 	@Override
 	public Object call(Scope scope, Object... args) {
 		Object result = callOptionalValue(scope, args);
 		if (result == null)
-			throw new CalculatorError(
-					getName() + " does not return a value");
+			throw new CalculatorError(getName() + " does not return a value");
 		return result;
 	}
 	
@@ -143,21 +147,11 @@ public class MethodFunction implements Function {
 		Method method = dispatch(methods, args);
 		if (method == null)
 			throw new TypeError();
-		Object result;
 		try {
-			result = method.invoke(null, args);
+			return evalValue(method.invoke(null, args));
 		} catch (InvocationTargetException ex) {
 			throw ex.getCause();
 		}
-		if (result instanceof Boolean)
-			return toNumber((Boolean) result);
-		else if (result instanceof Integer)
-			return Real.valueOf(((Integer) result).doubleValue());
-		else if (result instanceof Double)
-			return Real.valueOf((Double) result);
-		// else if (result == null)
-		// return scope.getVariable("ans");
-		return result;
 	}
 	
 	public static Method dispatch(Method[] options, Object... args) {
@@ -178,12 +172,10 @@ public class MethodFunction implements Function {
 				Class<?> c1 = paramTypes[i];
 				Class<?> c2;
 				if (c1 != givenTypes[i]) {
-					if (args[i] instanceof Double) {
+					if (args[i] instanceof java.lang.Number) {
 						c2 = Real.class;
-						args[i] = Real.valueOf((Double) args[i]);
-					} else if (args[i] instanceof Integer) {
-						c2 = Real.class;
-						args[i] = Real.valueOf((Integer) args[i]);
+						args[i] = Real.valueOf(
+								((java.lang.Number) args[i]).doubleValue());
 					} else if (args[i] instanceof Function) {
 						c2 = Function.class;
 					} else
@@ -198,29 +190,23 @@ public class MethodFunction implements Function {
 			
 			if (!matched) {
 				if (givenTypes.length == 2) {
-					operator operator =
-							method.getAnnotation(operator.class);
-					if (operator.reversible()) {
+					operator operator = method.getAnnotation(operator.class);
+					if (operator != null && operator.reversible()) {
 						matched = true;
 						for (int i = 0; i < 2; i++) {
 							Class<?> c1 = paramTypes[1 - i];
 							Class<?> c2;
 							if (c1 != givenTypes[i]) {
-								if (args[i] instanceof Double) {
+								if (args[i] instanceof java.lang.Number) {
 									c2 = Real.class;
 									args[i] = Real.valueOf(
-											(Double) args[i]);
-								} else if (args[i] instanceof Integer) {
-									c2 = Real.class;
-									args[i] = Real.valueOf(
-											(Integer) args[i]);
+											((java.lang.Number) args[i]).doubleValue());
 								} else if (args[i] instanceof Function) {
 									c2 = Function.class;
 								} else
 									c2 = givenTypes[i];
 								
-								if (c1 != c2
-										&& !c1.isAssignableFrom(c2)) {
+								if (c1 != c2 && !c1.isAssignableFrom(c2)) {
 									matched = false;
 									break;
 								}

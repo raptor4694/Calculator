@@ -3,28 +3,26 @@ package calculator;
 import lombok.experimental.ExtensionMethod;
 
 @ExtensionMethod(String.class)
-public class ExpressionMatrixIndexPrefixDecrement extends
-		ExpressionMatrixIndex implements ExpressionPrefixDecrement {
+public class ExpressionMatrixIndexPrefixDecrement extends ExpressionMatrixIndex
+		implements ExpressionPrefixDecrement {
 	
-	public ExpressionMatrixIndexPrefixDecrement(Expression matrix,
-			Expression row, Expression column) {
+	public ExpressionMatrixIndexPrefixDecrement(Expression matrix, Expression row,
+			Expression column) {
 		super(matrix, row, column);
 	}
 	
 	@Override
 	public String toCompiledString() {
-		return "<DEC %s[%s, %s]>".format(
-				(Object) matrix.toCompiledString(),
+		return "<DEC %s[%s, %s]>".format((Object) matrix.toCompiledString(),
 				row.toCompiledString(), column.toCompiledString());
 	}
 	
 	@Override
 	public Object eval(Scope scope) {
-		Number[][] matrix = evalReference(scope);
+		Number[][] matrix = evalNumberReference(scope);
 		int row = lastRow - 1, column = lastColumn - 1;
 		
-		return matrix[row][column] =
-				matrix[row][column].minus(Real.ONE);
+		return matrix[row][column] = matrix[row][column].minus(Real.ONE);
 	}
 	
 	@Override

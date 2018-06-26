@@ -6,8 +6,7 @@ import lombok.experimental.ExtensionMethod;
 public class ExpressionIndexPrefixIncrement extends ExpressionIndex
 		implements ExpressionPrefixIncrement {
 	
-	public ExpressionIndexPrefixIncrement(Expression array,
-			Expression index) {
+	public ExpressionIndexPrefixIncrement(Expression array, Expression index) {
 		super(array, index);
 	}
 	
@@ -19,7 +18,7 @@ public class ExpressionIndexPrefixIncrement extends ExpressionIndex
 	
 	@Override
 	public Object eval(Scope scope) {
-		Number[] array = evalReference(scope);
+		Number[] array = evalNumberReference(scope);
 		int index = lastIndex - 1;
 		
 		return array[index] = array[index].plus(Real.ONE);
@@ -32,8 +31,7 @@ public class ExpressionIndexPrefixIncrement extends ExpressionIndex
 	
 	@Override
 	public String toString() {
-		return "IndexPrefixIncrement{array=%s,index=%s}".format(array,
-				index);
+		return "IndexPrefixIncrement{array=%s,index=%s}".format(array, index);
 	}
 	
 	@Override

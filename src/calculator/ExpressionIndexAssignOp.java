@@ -21,26 +21,28 @@ public class ExpressionIndexAssignOp extends ExpressionIndexAssign
 		switch (operator) {
 		case ADD:
 		case SUBTRACT:
-			return "<%s %s %s %s[%s]>".format(operator,
-					value.toCompiledString(), operator.getVerb(),
-					array.toCompiledString(),
+			return "<%s %s %s %s[%s]>".format(operator, value.toCompiledString(),
+					operator.getVerb(), array.toCompiledString(),
 					index.toCompiledString());
 		default:
-			return "<%s %s[%s] %s %s>".format(operator,
-					array.toCompiledString(), index.toCompiledString(),
-					operator.getVerb(), value.toCompiledString());
+			return "<%s %s[%s] %s %s>".format(operator, array.toCompiledString(),
+					index.toCompiledString(), operator.getVerb(),
+					value.toCompiledString());
 		}
 	}
 	
 	@Override
 	public Object eval(Scope scope) {
-		Number[] array = evalReference(scope);
+		Object[] array = evalReference(scope);
 		int index = lastIndex - 1;
 		
 		Object obj = value.eval(scope);
 		
-		return array[index] =
-				toNumber(operator.call(scope, array[index], obj));
+		try {
+			return array[index] = evalValue(operator.call(scope, array[index], obj));
+		} catch (ArrayStoreException e) {
+			throw new TypeError(e);
+		}
 	}
 	
 	@Override
@@ -51,8 +53,8 @@ public class ExpressionIndexAssignOp extends ExpressionIndexAssign
 	
 	@Override
 	public String toString() {
-		return "IndexAssignOp{array=%s,index=%s,operator=%s,value=%s}".format(
-				array, index, operator, value);
+		return "IndexAssignOp{array=%s,index=%s,operator=%s,value=%s}".format(array,
+				index, operator, value);
 	}
 	
 	@Override

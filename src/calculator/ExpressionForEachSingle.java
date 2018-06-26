@@ -28,20 +28,20 @@ public class ExpressionForEachSingle implements Expression {
 		scope = new Scope(scope);
 		Object last = null;
 		
-		if (obj instanceof Number[]) {
+		if (obj instanceof Object[][]) {
 			
-			Number[] array = (Number[]) obj;
+			Object[][] matrix = (Object[][]) obj;
 			
-			for (Number n : array) {
-				last = evalBody(scope, evalValueFunction, n);
+			for (Object[] array : matrix) {
+				last = evalBody(scope, evalValueFunction, array);
 			}
 			
-		} else if (obj instanceof Number[][]) {
+		} else if (obj instanceof Object[]) {
 			
-			Number[][] matrix = (Number[][]) obj;
+			Object[] array = (Object[]) obj;
 			
-			for (Number[] array : matrix) {
-				last = evalBody(scope, evalValueFunction, array);
+			for (Object n : array) {
+				last = evalBody(scope, evalValueFunction, n);
 			}
 			
 		} else
@@ -66,10 +66,8 @@ public class ExpressionForEachSingle implements Expression {
 	
 	@Override
 	public String toEvalString() {
-		return "for(%s : %s) ".format((Object) variable,
-				array.toEvalString())
-				+ (body instanceof ExpressionMulti
-						? "{ " + body.toEvalString() + " }"
+		return "for(%s : %s) ".format((Object) variable, array.toEvalString())
+				+ (body instanceof ExpressionMulti? "{ " + body.toEvalString() + " }"
 						: body.toEvalString());
 	}
 	

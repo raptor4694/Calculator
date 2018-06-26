@@ -490,10 +490,7 @@ public @UtilityClass class Console {
 						if (!(value instanceof Function)) {
 							scope.setVariable("ans", ans = value);
 							
-							if (value instanceof String) {
-								printString((String) value);
-							} else
-								println(value);
+							printValue(value, 0);
 						} else {
 							println(((Function) value).getDescription());
 						}
@@ -516,7 +513,7 @@ public @UtilityClass class Console {
 						}
 						value = array;
 					} else if (value instanceof Number[][]) {
-						Number[][] matrix = copy((Number[][]) value);
+						Number[][] matrix = (Number[][]) copy((Number[][]) value);
 						for (Number[] array : matrix) {
 							for (int i = 0; i < array.length; i++) {
 								array[i] = array[i].plus(add);
@@ -526,28 +523,14 @@ public @UtilityClass class Console {
 					}
 				}
 				String s = ((ExpressionNamed) e).getNameString() + " = ";
-				if (value instanceof Number[][]) {
+				if (value != null) {
 					print(s);
-					printMatrix((Number[][]) value, s.length());
-				} else if (value != null) {
-					print(s);
-					if (value instanceof String) {
-						printString((String) value);
-					} else if (value instanceof MethodFunction) {
-						println(((Function) value).getName());
-					} else {
-						println(value);
-					}
+					printValue(value, s.length());
 				} else if (first && !printedLine) {
 					println();
 				}
 			} else if (value != null && !(e instanceof ExpressionDeleteVariable)) {
-				if (value instanceof Number[][])
-					printMatrix((Number[][]) value, 0);
-				else if (value instanceof String) {
-					printString((String) value);
-				} else
-					println(value);
+				printValue(value, 0);
 			} else if (first && !printedLine) {
 				println();
 			}
@@ -565,6 +548,36 @@ public @UtilityClass class Console {
 		} finally {
 			last = e;
 		}
+	}
+	
+	private void printValue(Object value, int indent) {
+		if (value instanceof String) {
+			printString((String) value);
+		} else if (value instanceof MethodFunction) {
+			println(((Function) value).getName());
+		} else if (value instanceof Object[][]) {
+			printMatrix((Object[][]) value, indent);
+		} else if (value instanceof Object[]) {
+			printArray((Object[]) value);
+		} else {
+			println(value);
+		}
+	}
+	
+	private void printArray(Object[] array) {
+		print('{');
+		for (int i = 0; i < array.length; i++) {
+			if (i != 0)
+				print(", ");
+			if (array[i] instanceof String) {
+				print('"');
+				print(array[i].toString().replace("\\", "\\\\").replaceAll("\"",
+						"\\\""));
+				print('"');
+			} else
+				print(array[i]);
+		}
+		println('}');
 	}
 	
 	private Object doEval(Expression e) {
@@ -638,7 +651,7 @@ public @UtilityClass class Console {
 					return result;
 				} else if (obj instanceof Number[][]) {
 					Number[][] matrix = (Number[][]) obj;
-					Number[][] result = postfix? copy(matrix) : matrix;
+					Number[][] result = postfix? (Number[][]) copy(matrix) : matrix;
 					if (add) {
 						for (Number[] array : matrix) {
 							for (int i = 0; i < array.length; i++)
@@ -659,14 +672,18 @@ public @UtilityClass class Console {
 		}
 	}
 	
-	private void printMatrix(Number[][] matrix, int indent) {
+	private void printMatrix(Object[][] matrix, int indent) {
 		List<List<String>> elements = new ArrayList<>();
 		int[] maxLengths = new int[columnCount(matrix)];
 		
-		for (Number[] array : matrix) {
+		for (Object[] array : matrix) {
 			List<String> list = new ArrayList<>();
 			for (int i = 0; i < array.length; i++) {
-				String s = Printer.toString(array[i]);
+				String s =
+						(array[i] instanceof String
+								? '"' + array[i].toString().replace("\\",
+										"\\\\").replaceAll("\"", "\\\"") + '"'
+								: Printer.toString(array[i]));
 				list.add(s);
 				if (s.length() > maxLengths[i]) {
 					maxLengths[i] = s.length();
