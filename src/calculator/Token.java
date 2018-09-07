@@ -5,58 +5,60 @@ import java.util.Objects;
 public class Token implements CharSequence {
 	
 	public final TokenKind kind;
-	public final int pos;
+	public final int pos, line;
 	
 	private String stringValue;
 	private double numberValue;
 	private String toStringResult = null;
 	
 	@SuppressWarnings("deprecation")
-	public Token(int pos, TokenKind kind) {
+	public Token(int pos, int line, TokenKind kind) {
 		if (kind == TokenKind.CUSTOM)
 			throw new IllegalArgumentException("Illegal token kind");
 		this.kind = kind;
+		this.line = line;
 		this.pos = pos;
 	}
 	
-	public Token(int pos, String strValue) {
-		this(pos, TokenKind.WORD);
+	public Token(int pos, int line, String strValue) {
+		this(pos, line, TokenKind.WORD);
 		stringValue = strValue;
 	}
 	
-	public Token(int pos, double d) {
-		this(pos, TokenKind.NUMBER);
+	public Token(int pos, int line, double d) {
+		this(pos, line, TokenKind.NUMBER);
 		numberValue = d;
 	}
 	
-	public Token(int pos, TokenKind kind, String strValue) {
-		this(pos, kind);
+	public Token(int pos, int line, TokenKind kind, String strValue) {
+		this(pos, line, kind);
 		stringValue = strValue;
 	}
 	
 	public Token(Token t) {
 		kind = t.kind;
 		pos = t.pos;
+		line = t.line;
 		stringValue = t.stringValue;
 		numberValue = t.numberValue;
 		toStringResult = t.toStringResult;
 	}
 	
-	private Token(Token t, int pos) {
+	private Token(Token t, int pos, int line) {
 		kind = t.kind;
 		this.pos = pos;
+		this.line = line;
 		stringValue = t.stringValue;
 		numberValue = t.numberValue;
 		toStringResult = t.toStringResult;
 	}
 	
-	public Token at(int pos) {
-		return new Token(this, pos);
+	public Token at(int pos, int line) {
+		return new Token(this, pos, line);
 	}
 	
 	public String stringValue() {
-		if (kind.symbol != null || kind == TokenKind.NUMBER
-				|| stringValue == null)
+		if (kind.symbol != null || kind == TokenKind.NUMBER || stringValue == null)
 			throw new AssertionError();
 		return stringValue;
 	}
@@ -73,8 +75,7 @@ public class Token implements CharSequence {
 			switch (kind) {
 			case STRING:
 				return toStringResult = "\""
-						+ stringValue.replace("\\", "\\\\").replace(
-								"\"", "\\\"")
+						+ stringValue.replace("\\", "\\\\").replace("\"", "\\\"")
 						+ "\"";
 			case WORD:
 				return toStringResult = stringValue;
@@ -94,13 +95,11 @@ public class Token implements CharSequence {
 	public int hashCode() {
 		switch (kind) {
 		case NUMBER:
-			return -TokenKind.CUSTOM.ordinal()
-					- Double.hashCode(doubleValue());
+			return -TokenKind.CUSTOM.ordinal() - Double.hashCode(doubleValue());
 		case WORD:
 			return stringValue.hashCode();
 		case STRING:
-			return -TokenKind.CUSTOM.ordinal()
-					- stringValue.hashCode();
+			return -TokenKind.CUSTOM.ordinal() - stringValue.hashCode();
 		default:
 			return -kind.ordinal();
 		}

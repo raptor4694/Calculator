@@ -1,5 +1,77 @@
 package calculator;
 
+import calculator.expressions.Expression;
+import calculator.expressions.ExpressionAbs;
+import calculator.expressions.ExpressionArrayLiteral;
+import calculator.expressions.ExpressionAssign;
+import calculator.expressions.ExpressionAssignOp;
+import calculator.expressions.ExpressionBinaryOperator;
+import calculator.expressions.ExpressionBreak;
+import calculator.expressions.ExpressionColumnLiteral;
+import calculator.expressions.ExpressionComparisonChain;
+import calculator.expressions.ExpressionConditional;
+import calculator.expressions.ExpressionDeleteAll;
+import calculator.expressions.ExpressionDeleteLocal;
+import calculator.expressions.ExpressionDeleteVariable;
+import calculator.expressions.ExpressionDimAssign;
+import calculator.expressions.ExpressionDollar;
+import calculator.expressions.ExpressionElementwiseBinaryOperator;
+import calculator.expressions.ExpressionFor;
+import calculator.expressions.ExpressionForEachDouble;
+import calculator.expressions.ExpressionForEachSingle;
+import calculator.expressions.ExpressionFunctionCall;
+import calculator.expressions.ExpressionFunctionDefinition;
+import calculator.expressions.ExpressionIf;
+import calculator.expressions.ExpressionIndex;
+import calculator.expressions.ExpressionIndexAssign;
+import calculator.expressions.ExpressionIndexAssignOp;
+import calculator.expressions.ExpressionIndexPostfixDecrement;
+import calculator.expressions.ExpressionIndexPostfixIncrement;
+import calculator.expressions.ExpressionIndexPrefixDecrement;
+import calculator.expressions.ExpressionIndexPrefixIncrement;
+import calculator.expressions.ExpressionLiteral;
+import calculator.expressions.ExpressionLocal;
+import calculator.expressions.ExpressionMatrixIndex;
+import calculator.expressions.ExpressionMatrixIndexAssign;
+import calculator.expressions.ExpressionMatrixIndexAssignOp;
+import calculator.expressions.ExpressionMatrixIndexPostfixDecrement;
+import calculator.expressions.ExpressionMatrixIndexPostfixIncrement;
+import calculator.expressions.ExpressionMatrixIndexPrefixDecrement;
+import calculator.expressions.ExpressionMatrixIndexPrefixIncrement;
+import calculator.expressions.ExpressionMulti;
+import calculator.expressions.ExpressionMultiplyChain;
+import calculator.expressions.ExpressionParenthesis;
+import calculator.expressions.ExpressionReturn;
+import calculator.expressions.ExpressionTry;
+import calculator.expressions.ExpressionUnaryOperator;
+import calculator.expressions.ExpressionVarPostfixDecrement;
+import calculator.expressions.ExpressionVarPostfixIncrement;
+import calculator.expressions.ExpressionVarPrefixDecrement;
+import calculator.expressions.ExpressionVarPrefixIncrement;
+import calculator.expressions.ExpressionVariable;
+import calculator.expressions.ExpressionWhile;
+import calculator.expressions.ExpressionX;
+import calculator.expressions.ExpressionXAssign;
+import calculator.expressions.ExpressionXAssignOp;
+import calculator.expressions.ExpressionXPostfixDecrement;
+import calculator.expressions.ExpressionXPostfixIncrement;
+import calculator.expressions.ExpressionXPrefixDecrement;
+import calculator.expressions.ExpressionXPrefixIncrement;
+import calculator.expressions.ExpressionY;
+import calculator.expressions.ExpressionYAssign;
+import calculator.expressions.ExpressionYAssignOp;
+import calculator.expressions.ExpressionYPostfixDecrement;
+import calculator.expressions.ExpressionYPostfixIncrement;
+import calculator.expressions.ExpressionYPrefixDecrement;
+import calculator.expressions.ExpressionYPrefixIncrement;
+import calculator.expressions.ExpressionZ;
+import calculator.expressions.ExpressionZAssign;
+import calculator.expressions.ExpressionZAssignOp;
+import calculator.expressions.ExpressionZPostfixDecrement;
+import calculator.expressions.ExpressionZPostfixIncrement;
+import calculator.expressions.ExpressionZPrefixDecrement;
+import calculator.expressions.ExpressionZPrefixIncrement;
+
 public interface Visitor {
 	void visitExpression(Expression expr);
 	
@@ -11,8 +83,7 @@ public interface Visitor {
 	
 	void visitBinary(ExpressionBinaryOperator expr);
 	
-	default void visitBinary(
-			ExpressionElementwiseBinaryOperator expr) {
+	default void visitBinary(ExpressionElementwiseBinaryOperator expr) {
 		visitBinary((ExpressionBinaryOperator) expr);
 	}
 	
@@ -27,6 +98,10 @@ public interface Visitor {
 	void visitComparisonChain(ExpressionComparisonChain expr);
 	
 	void visitDelete(ExpressionDeleteVariable expr);
+	
+	void visitDeleteAll(ExpressionDeleteAll expr);
+	
+	void visitDeleteLocal(ExpressionDeleteLocal expr);
 	
 	void visitDimAssign(ExpressionDimAssign expr);
 	
@@ -110,8 +185,7 @@ public interface Visitor {
 	
 	void visitPrefixIncrement(ExpressionIndexPrefixIncrement expr);
 	
-	void visitPrefixIncrement(
-			ExpressionMatrixIndexPrefixIncrement expr);
+	void visitPrefixIncrement(ExpressionMatrixIndexPrefixIncrement expr);
 	
 	void visitPrefixIncrement(ExpressionXPrefixIncrement expr);
 	
@@ -123,8 +197,7 @@ public interface Visitor {
 	
 	void visitPrefixDecrement(ExpressionIndexPrefixDecrement expr);
 	
-	void visitPrefixDecrement(
-			ExpressionMatrixIndexPrefixDecrement expr);
+	void visitPrefixDecrement(ExpressionMatrixIndexPrefixDecrement expr);
 	
 	void visitPrefixDecrement(ExpressionXPrefixDecrement expr);
 	
@@ -136,8 +209,7 @@ public interface Visitor {
 	
 	void visitPostfixIncrement(ExpressionIndexPostfixIncrement expr);
 	
-	void visitPostfixIncrement(
-			ExpressionMatrixIndexPostfixIncrement expr);
+	void visitPostfixIncrement(ExpressionMatrixIndexPostfixIncrement expr);
 	
 	void visitPostfixIncrement(ExpressionXPostfixIncrement expr);
 	
@@ -149,8 +221,7 @@ public interface Visitor {
 	
 	void visitPostfixDecrement(ExpressionIndexPostfixDecrement expr);
 	
-	void visitPostfixDecrement(
-			ExpressionMatrixIndexPostfixDecrement expr);
+	void visitPostfixDecrement(ExpressionMatrixIndexPostfixDecrement expr);
 	
 	void visitPostfixDecrement(ExpressionXPostfixDecrement expr);
 	

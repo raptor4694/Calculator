@@ -10,6 +10,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import calculator.functions.Functions;
+import calculator.values.EnumOperator;
+import calculator.values.MethodFunction;
+
 public enum TokenKind {
 	// End Of File
 	EOF,
@@ -33,7 +37,7 @@ public enum TokenKind {
 	BAR ("|", new MethodFunction(Functions.class, "abs"), EnumOperator.OR, null),
 	AMP ("&", EnumOperator.AND),
 	CROSS ("><", EnumOperator.CROSS),
-	E ("E", EnumOperator.SCIENTIFIC_NOTATION), // 2E-6 for example
+	// E ("E", EnumOperator.SCIENTIFIC_NOTATION), // 2E-6 for example
 	// comparison operators
 	EQEQ ("==", EnumOperator.EQ),
 	BANGEQ ("!=", EnumOperator.NE),
@@ -55,6 +59,7 @@ public enum TokenKind {
 	CARETEQ ("^=", EnumOperator.POW),
 	BAREQ ("|=", EnumOperator.OR),
 	AMPEQ ("&=", EnumOperator.AND),
+	DOTEQ (".="),
 	
 	/**
 	 * @deprecated As the NOT operator is already element-wise only, this is
@@ -253,7 +258,7 @@ public enum TokenKind {
 	public static enum Section implements Iterable<TokenKind> {
 		UNARY_PREFIX_OPERATORS (SUB, HASHTAG, BANG),
 		UNARY_POSTFIX_OPERATORS (MODULO),
-		BINARY_OPERATORS (PLUS, SUB, STAR, SLASH, CARET, MOD, BAR, AMP, CROSS, E),
+		BINARY_OPERATORS (PLUS, SUB, STAR, SLASH, CARET, MOD, BAR, AMP, CROSS),
 		COMPARISON_OPERATORS (EQEQ, BANGEQ, LT, GT, LTEQ, GTEQ),
 		VECTOR_ELEMENT_ACCESS (DOTX, DOTY, DOTZ),
 		UNARY_ASSIGNMENT_OPERATORS (PLUSPLUS, SUBSUB),

@@ -1,7 +1,7 @@
 package calculator;
 
-import static calculator.Functions.*;
 import static calculator.Printer.*;
+import static calculator.functions.Functions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,18 +10,47 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
+import calculator.expressions.Expression;
+import calculator.expressions.ExpressionBreak;
+import calculator.expressions.ExpressionDeleteVariable;
+import calculator.expressions.ExpressionIncDec;
+import calculator.expressions.ExpressionIncrement;
+import calculator.expressions.ExpressionIndex;
+import calculator.expressions.ExpressionLiteral;
+import calculator.expressions.ExpressionMatrixIndex;
+import calculator.expressions.ExpressionMulti;
+import calculator.expressions.ExpressionNamed;
+import calculator.expressions.ExpressionPostfixIncDec;
+import calculator.expressions.ExpressionPostfixIncrement;
+import calculator.expressions.ExpressionReturn;
+import calculator.expressions.ExpressionVariable;
+import calculator.functions.Functions;
+import calculator.functions.Operations;
+import calculator.values.EnumOperator;
+import calculator.values.Function;
+import calculator.values.MethodFunction;
+import calculator.values.Number;
+import calculator.values.Real;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 
 public @UtilityClass class Console {
 	
 	Scanner keys;
+	@Getter
 	Scope scope;
+	@Getter
 	Expression last;
 	Object ans;
+	@Getter
 	Parser parser;
 	
 	void run() {
@@ -35,8 +64,34 @@ public @UtilityClass class Console {
 		scope.with(Printer.class);
 		scope.with(Console.class);
 		scope.setVariable("ans", 0.0);
+		scope.setTopLevel();
+		
+		scope = new Scope(scope);
 		
 		parser = new Parser("");
+		
+		parser.factor_hooks_post.add(parser -> {
+			if (parser.eat(TokenKind.AT)) {
+				Token t = parser.getToken();
+				Expression e;
+				/*	switch (t.kind) {
+					case WORD:
+						e = new ExpressionVariable("@" + t.stringValue());
+						break;
+					case NUMBER:
+						e = new ExpressionVariable("@" + t.doubleValue());
+						break;
+					case STRING:
+						e = new ExpressionVariable('"' + t.stringValue() + '"');
+						break;
+					default:*/
+				e = new ExpressionVariable(t.toString());
+				// }
+				parser.nextToken();
+				return e;
+			}
+			return null;
+		});
 		
 		welcome();
 		
@@ -55,8 +110,127 @@ public @UtilityClass class Console {
 	}
 	
 	@func("read content of file into current scope")
-	public void load(@param("filename") String filename) {
-		throw new AssertionError();
+	public Object load(@param("filename") String filename) {
+		// throw new AssertionError();
+		Expression expr = loadExpression(filename);
+		return expr.eval(scope);
+	}
+	
+	@func("read file as raw text data")
+	public String[] read(@param("filename") String filename) {
+		File file = new File(dir() + "\\" + filename);
+		try {
+			return new String(Files.readAllBytes(file.toPath())).split("\\R");
+		} catch (IOException e) {
+			throw new CalculatorError(e);
+		}
+	}
+	
+	@func("list currently defined variables")
+	public void Env() {
+		Scope scope = Console.scope;
+		Collection<String> vars = new HashSet<>();
+		while (!scope.isTopLevel()) {
+			vars.addAll(scope.localVarNames());
+			scope = scope.parent;
+		}
+		Collections.sort((List<String>) (vars = new ArrayList<>(vars)),
+				String::compareTo);
+		for (String s : vars) {
+			Object val = Console.scope.getVariable(s);
+			if (val instanceof Function && ((Function) val).getName() != null) {
+				println(val);
+			} else {
+				print(s + " = ");
+				println(val);
+			}
+		}
+	}
+	
+	public Expression loadExpression(String filename) {
+		Expression result;
+		if (filename.startsWith("<") && filename.endsWith(">")) {
+			filename = filename.substring(1, filename.length() - 1);
+			int i = filename.lastIndexOf('.');
+			if (i == -1) {
+				filename += ".math";
+			}
+			try (Scanner scan = new Scanner(Console.class.getResourceAsStream(
+					"/resources/lib/" + filename))) {
+				
+				scan.useDelimiter("\\A");
+				
+				String str = removeComments(scan.next().trim());
+				
+				result = Console.parser.reset(str).parse();
+				
+			} catch (Exception e) {
+				throw new CalculatorError(e);
+			}
+		} else {
+			File file = new File(dir() + "\\" + filename);
+			
+			if (file.getName().endsWith(".math")) {
+				try {
+					result = Console.parser.reset(removeComments(new String(
+							Files.readAllBytes(file.toPath())).trim())).parse();
+				} catch (IOException e) {
+					// System.out.println(file.getAbsolutePath());
+					throw new CalculatorError(e);
+				}
+			} else if (file.getName().endsWith(".mcmp")) {
+				try {
+					result = BytecodeParser.parse(Files.readAllBytes(file.toPath()));
+				} catch (IOException | BytecodeException e) {
+					throw new CalculatorError(e);
+				}
+			} else if (file.getName().endsWith(".mrep")) {
+				try {
+					result = CompiledParser.parse(
+							new String(Files.readAllBytes(file.toPath())));
+				} catch (IOException e) {
+					throw new CalculatorError(e);
+				}
+			} else if (file.getName().endsWith(".csv")) {
+				Pattern numberPattern = Pattern.compile(
+						"(\\d+(\\.\\d*)?|\\.\\d+)(,(\\d+(\\.\\d*)?|\\.\\d+))*");
+				try {
+					List<String> lines = Files.readAllLines(file.toPath());
+					boolean numberFormat = true;
+					for (String line : lines) {
+						if (!numberPattern.matcher(line).matches()) {
+							numberFormat = false;
+							break;
+						}
+					}
+					
+					if (numberFormat) {
+						Number[][] numbers = new Number[lines.size()][];
+						for (int i = 0; i < lines.size(); i++) {
+							String[] split = lines.get(i).split(",");
+							numbers[i] = new Number[split.length];
+							for (int j = 0; j < split.length; j++) {
+								numbers[i][j] =
+										Real.valueOf(Double.parseDouble(split[j]));
+							}
+						}
+						result = new ExpressionLiteral(numbers);
+					} else {
+						String[][] strings = new String[lines.size()][];
+						for (int i = 0; i < lines.size(); i++) {
+							strings[i] = lines.get(i).split(",");
+						}
+						result = new ExpressionLiteral(strings);
+					}
+				} catch (IOException e) {
+					throw new CalculatorError(e);
+				}
+			} else {
+				throw new CalculatorError(
+						"Do not know how to read this file extension");
+			}
+		}
+		return result;
 	}
 	
 	private void welcome() {
@@ -239,7 +413,34 @@ public @UtilityClass class Console {
 					&& obj != EnumOperator.SCIENTIFIC_NOTATION)
 				funcNames.add(((Function) obj).getName());
 		}
+		
+		funcNames.add("if");
+		funcNames.add("while");
+		funcNames.add("for");
+		funcNames.add("local");
+		funcNames.add("functions");
+		funcNames.add("return");
+		funcNames.add("strings");
+		funcNames.add("info");
+		funcNames.add("topics");
 		funcNames.sort((a, b) -> a.compareToIgnoreCase(b));
+		
+		for (int i = 0; i < funcNames.size(); i++) {
+			String name = funcNames.get(i);
+			switch (name) {
+			case "if":
+			case "while":
+			case "for":
+			case "local":
+			case "functions":
+			case "return":
+			case "strings":
+			case "info":
+			case "topics":
+				funcNames.set(i, '"' + name + '"');
+				break;
+			}
+		}
 		
 		while (funcNames.size() > 20 && funcNames.get(0).length() < 120) {
 			int col1_length = 0, col2_length = 0;
@@ -292,6 +493,8 @@ public @UtilityClass class Console {
 	public void help(String topic) {
 		switch (topic) {
 		case "if":
+		case "then":
+		case "else":
 			println("If Expression:\n" + "Syntax:\n"
 					+ "  if <expr> then <expr> else <expr>\n"
 					+ "  if <expr> then { <exprs> } else { <exprs> }");
@@ -331,10 +534,23 @@ public @UtilityClass class Console {
 			break;
 		case "topics":
 			println("Help topics are:\n"
-					+ "if, while, for, for-each, try, local, strings, info");
+					+ "if, while, for, for-each, try, local, strings, info, return, functions");
+			break;
+		case "delete":
+			println("Delete Variable:\n" + "Syntax:\n" + "  delete <variable>");
 			break;
 		case "info":
 			welcome();
+			break;
+		case "return":
+			println("Return from Function:\n" + "Syntax:\n" + "  return <expr>");
+			break;
+		case "functions":
+			println("Functions:\n" + "Syntax:\n"
+					+ "  <name> ( [args...] ) = <expr>\n"
+					+ "  <name> ( [args...] ) = { <exprs> }\n"
+					+ "  ( [args...] ) => <expr>\n"
+					+ "  ( [args...] ) => { <exprs> }");
 			break;
 		default:
 			println("Unknown chapter \"" + topic + "\"");
@@ -411,7 +627,7 @@ public @UtilityClass class Console {
 		new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
 	}
 	
-	Exception lastError;
+	public Exception lastError;
 	private boolean first = false;
 	
 	public Object expr(String str) {
@@ -428,8 +644,65 @@ public @UtilityClass class Console {
 		return CompiledParser.parse(expr).toEvalString();
 	}
 	
+	public String removeComments(String s) {
+		StringBuilder b = new StringBuilder();
+		boolean inString = false, escape = false, inSLComment = false,
+				inMLComment = false;
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (inString) {
+				if (escape) {
+					escape = false;
+				} else
+					switch (c) {
+					case '"':
+						inString = false;
+						break;
+					case '\\':
+						escape = true;
+						break;
+					}
+				b.append(c);
+			} else if (inSLComment) {
+				switch (c) {
+				case '\r':
+					if (i + 1 < s.length() && s.charAt(i + 1) == '\n')
+						i++;
+				case '\n':
+					inSLComment = false;
+				}
+			} else if (inMLComment) {
+				if (c == '*' && i + 1 < s.length() && s.charAt(i + 1) == '/') {
+					inMLComment = false;
+					i++;
+				}
+			} else {
+				switch (c) {
+				case '/':
+					if (i + 1 < s.length()) {
+						switch (s.charAt(i + 1)) {
+						case '*':
+							i++;
+							inMLComment = true;
+							continue;
+						case '/':
+							i++;
+							inSLComment = true;
+							continue;
+						}
+					}
+					break;
+				case '"':
+					inString = true;
+				}
+				b.append(c);
+			}
+		}
+		return b.toString();
+	}
+	
 	private void eval0(String str) {
-		if ((str = str.trim()).isEmpty())
+		if ((str = removeComments(str.trim())).isEmpty())
 			return;
 		
 		switch (str.charAt(0)) {

@@ -8,11 +8,49 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import calculator.expressions.Expression;
+import calculator.expressions.ExpressionArrayLiteral;
+import calculator.expressions.ExpressionBinaryOperator;
+import calculator.expressions.ExpressionColumnLiteral;
+import calculator.expressions.ExpressionComparisonChain;
+import calculator.expressions.ExpressionConditional;
+import calculator.expressions.ExpressionDeleteAll;
+import calculator.expressions.ExpressionDeleteLocal;
+import calculator.expressions.ExpressionDeleteVariable;
+import calculator.expressions.ExpressionDimAssign;
+import calculator.expressions.ExpressionDollar;
+import calculator.expressions.ExpressionElementwiseBinaryOperator;
+import calculator.expressions.ExpressionFor;
+import calculator.expressions.ExpressionForEachDouble;
+import calculator.expressions.ExpressionForEachSingle;
+import calculator.expressions.ExpressionFunctionCall;
+import calculator.expressions.ExpressionFunctionDefinition;
+import calculator.expressions.ExpressionIf;
+import calculator.expressions.ExpressionIndex;
+import calculator.expressions.ExpressionLiteral;
+import calculator.expressions.ExpressionLocal;
+import calculator.expressions.ExpressionMatrixIndex;
+import calculator.expressions.ExpressionMulti;
+import calculator.expressions.ExpressionMultiplyChain;
+import calculator.expressions.ExpressionReferenceable;
+import calculator.expressions.ExpressionReturn;
+import calculator.expressions.ExpressionTry;
+import calculator.expressions.ExpressionUnaryOperator;
+import calculator.expressions.ExpressionVariable;
+import calculator.expressions.ExpressionWhile;
+import calculator.expressions.ExpressionX;
+import calculator.expressions.ExpressionY;
+import calculator.expressions.ExpressionZ;
+import calculator.values.Complex;
+import calculator.values.EnumOperator;
+import calculator.values.MethodFunction;
+import calculator.values.Number;
+import calculator.values.Real;
+import calculator.values.UserFunction;
 import lombok.SneakyThrows;
 
 public class BytecodeParser {
-	public static Expression parse(byte[] bytes)
-			throws BytecodeException {
+	public static Expression parse(byte[] bytes) throws BytecodeException {
 		return new BytecodeParser(bytes).parse();
 	}
 	
@@ -56,8 +94,7 @@ public class BytecodeParser {
 			}
 			if (exprs.isEmpty())
 				return new ExpressionLiteral(() -> new Number[0]);
-			return columnLiteral
-					? new ExpressionColumnLiteral(toArray(exprs))
+			return columnLiteral? new ExpressionColumnLiteral(toArray(exprs))
 					: new ExpressionArrayLiteral(toArray(exprs));
 		}
 		case UNARY:
@@ -67,29 +104,24 @@ public class BytecodeParser {
 			EnumOperator oper = operator();
 			Expression lhs = expr(), rhs = expr();
 			return elementWise
-					? new ExpressionElementwiseBinaryOperator(lhs,
-							oper, rhs)
+					? new ExpressionElementwiseBinaryOperator(lhs, oper, rhs)
 					: new ExpressionBinaryOperator(lhs, oper, rhs);
 		}
 		case IF: {
 			boolean conditional = bool();
 			Expression cond = expr(), then = expr(), other = expr();
-			return conditional
-					? new ExpressionConditional(cond, then, other)
+			return conditional? new ExpressionConditional(cond, then, other)
 					: new ExpressionIf(cond, then, other);
 		}
 		case WHILE:
 			buf.get();
 			return new ExpressionWhile(expr(), expr());
 		case FOR:
-			return new ExpressionFor(string(), expr(), expr(), expr(),
-					expr());
+			return new ExpressionFor(string(), expr(), expr(), expr(), expr());
 		case FOREACH:
-			return new ExpressionForEachSingle(string(), expr(),
-					expr());
+			return new ExpressionForEachSingle(string(), expr(), expr());
 		case FOREACH2:
-			return new ExpressionForEachDouble(string(), string(),
-					expr(), expr());
+			return new ExpressionForEachDouble(string(), string(), expr(), expr());
 		case CALL: {
 			Expression func = expr();
 			List<Expression> args = newList();
@@ -110,14 +142,13 @@ public class BytecodeParser {
 				args.add(arg);
 				arg = string();
 			}
-			return new ExpressionFunctionDefinition(new UserFunction(
-					name, args.toArray(new String[0]), expr()));
+			return new ExpressionFunctionDefinition(
+					new UserFunction(name, args.toArray(new String[0]), expr()));
 		}
 		case METHOD: {
 			Class<?> clazz = Class.forName(string());
 			String name = string();
-			return new ExpressionLiteral(
-					new MethodFunction(clazz, name));
+			return new ExpressionLiteral(new MethodFunction(clazz, name));
 		}
 		case OPERATOR:
 			return new ExpressionLiteral(operator());
@@ -125,6 +156,8 @@ public class BytecodeParser {
 			return new ExpressionDimAssign(string(), expr());
 		case DELETE:
 			return new ExpressionDeleteVariable(string());
+		case DELALL:
+			return bool()? new ExpressionDeleteAll() : new ExpressionDeleteLocal();
 		case DOLLAR:
 			return new ExpressionDollar();
 		case DOUBLE:
@@ -138,8 +171,7 @@ public class BytecodeParser {
 			buf.reset();
 			return new ExpressionLiteral(Real.valueOf(number()));
 		case COMPLEX:
-			return new ExpressionLiteral(
-					Complex.valueOf(number(), number()));
+			return new ExpressionLiteral(Complex.valueOf(number(), number()));
 		case IMAGINARY:
 			return new ExpressionLiteral(Complex.valueOf(0, number()));
 		case I:
@@ -159,8 +191,7 @@ public class BytecodeParser {
 					defs.add(new ExpressionLocal.DimDef(name, expr()));
 					break;
 				case OPCODES_COUNT:
-					defs.add(
-							new ExpressionLocal.DefImpl(name, expr()));
+					defs.add(new ExpressionLocal.DefImpl(name, expr()));
 					break;
 				case FUNCDEF: {
 					List<String> args = newList();
@@ -169,10 +200,8 @@ public class BytecodeParser {
 						args.add(arg);
 						arg = string();
 					}
-					defs.add(new ExpressionLocal.FuncDef(
-							new UserFunction(name,
-									args.toArray(new String[0]),
-									expr())));
+					defs.add(new ExpressionLocal.FuncDef(new UserFunction(name,
+							args.toArray(new String[0]), expr())));
 					break;
 				}
 				default:
@@ -183,8 +212,7 @@ public class BytecodeParser {
 				buf.reset();
 			} while (b != 0);
 			buf.get();
-			return new ExpressionLocal(
-					defs.toArray(new ExpressionLocal.Def[0]));
+			return new ExpressionLocal(defs.toArray(new ExpressionLocal.Def[0]));
 		}
 		case INDEX:
 			return new ExpressionIndex(expr(), expr());
@@ -218,8 +246,7 @@ public class BytecodeParser {
 			return ((ExpressionReferenceable) expr()).toAssign(expr());
 		case ASSIGNOP: {
 			EnumOperator operator = operator();
-			return ((ExpressionReferenceable) expr()).toAssignOp(
-					operator, expr());
+			return ((ExpressionReferenceable) expr()).toAssignOp(operator, expr());
 		}
 		case PREFIX_INC:
 			return ((ExpressionReferenceable) expr()).toPrefixIncrement();
@@ -235,8 +262,7 @@ public class BytecodeParser {
 			ArrayList<ExpressionComparisonChain.Op> ops = newList();
 			for (int i = 0; i < size; i++) {
 				boolean elementWise = bool();
-				ops.add(ExpressionComparisonChain.Op.of(operator(),
-						elementWise));
+				ops.add(ExpressionComparisonChain.Op.of(operator(), elementWise));
 			}
 			for (int i = 0; i <= size; i++) {
 				exprs.add(expr());
@@ -284,8 +310,7 @@ public class BytecodeParser {
 				b = buf.get();
 			}
 		} catch (BufferUnderflowException e) {
-			throw new BytecodeException(
-					"Reached EOF while parsing string");
+			throw new BytecodeException("Reached EOF while parsing string");
 		}
 		return baos.toString();
 	}

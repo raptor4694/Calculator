@@ -5,6 +5,63 @@ import static calculator.TokenKind.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import calculator.expressions.Expression;
+import calculator.expressions.ExpressionAbs;
+import calculator.expressions.ExpressionArrayLiteral;
+import calculator.expressions.ExpressionAssign;
+import calculator.expressions.ExpressionAssignOp;
+import calculator.expressions.ExpressionBinaryOperator;
+import calculator.expressions.ExpressionBreak;
+import calculator.expressions.ExpressionColumnLiteral;
+import calculator.expressions.ExpressionComparisonChain;
+import calculator.expressions.ExpressionConditional;
+import calculator.expressions.ExpressionDeleteAll;
+import calculator.expressions.ExpressionDeleteLocal;
+import calculator.expressions.ExpressionDeleteVariable;
+import calculator.expressions.ExpressionDimAssign;
+import calculator.expressions.ExpressionDollar;
+import calculator.expressions.ExpressionElementwiseBinaryOperator;
+import calculator.expressions.ExpressionFor;
+import calculator.expressions.ExpressionForEachDouble;
+import calculator.expressions.ExpressionForEachSingle;
+import calculator.expressions.ExpressionFunctionCall;
+import calculator.expressions.ExpressionFunctionDefinition;
+import calculator.expressions.ExpressionIf;
+import calculator.expressions.ExpressionIndexAssign;
+import calculator.expressions.ExpressionIndexAssignOp;
+import calculator.expressions.ExpressionIndexPostfixDecrement;
+import calculator.expressions.ExpressionIndexPostfixIncrement;
+import calculator.expressions.ExpressionIndexPrefixDecrement;
+import calculator.expressions.ExpressionIndexPrefixIncrement;
+import calculator.expressions.ExpressionLiteral;
+import calculator.expressions.ExpressionLocal;
+import calculator.expressions.ExpressionMatrixIndexAssign;
+import calculator.expressions.ExpressionMatrixIndexAssignOp;
+import calculator.expressions.ExpressionMatrixIndexPostfixDecrement;
+import calculator.expressions.ExpressionMatrixIndexPostfixIncrement;
+import calculator.expressions.ExpressionMatrixIndexPrefixDecrement;
+import calculator.expressions.ExpressionMatrixIndexPrefixIncrement;
+import calculator.expressions.ExpressionMulti;
+import calculator.expressions.ExpressionMultiplyChain;
+import calculator.expressions.ExpressionParenthesis;
+import calculator.expressions.ExpressionReferenceable;
+import calculator.expressions.ExpressionReturn;
+import calculator.expressions.ExpressionTry;
+import calculator.expressions.ExpressionUnaryOperator;
+import calculator.expressions.ExpressionVarPostfixDecrement;
+import calculator.expressions.ExpressionVarPostfixIncrement;
+import calculator.expressions.ExpressionVarPrefixDecrement;
+import calculator.expressions.ExpressionVarPrefixIncrement;
+import calculator.expressions.ExpressionVariable;
+import calculator.expressions.ExpressionWhile;
+import calculator.expressions.ExpressionX;
+import calculator.expressions.ExpressionY;
+import calculator.expressions.ExpressionZ;
+import calculator.values.EnumOperator;
+import calculator.values.MethodFunction;
+import calculator.values.Number;
+import calculator.values.Real;
+import calculator.values.UserFunction;
 import lombok.SneakyThrows;
 
 public class CompiledParser extends Parser {
@@ -45,8 +102,9 @@ public class CompiledParser extends Parser {
 		return result;
 	}
 	
+	@Override
 	@SneakyThrows
-	Expression expr() {
+	public Expression expr() {
 		Expression e;
 		switch (token.kind) {
 		case LBRACE: {
@@ -89,13 +147,11 @@ public class CompiledParser extends Parser {
 					} while (eat(COMMA));
 				}
 				accept(RBRACKET);
-				e = new ExpressionLiteral(
-						numbers.toArray(new Number[0]));
+				e = new ExpressionLiteral(numbers.toArray(new Number[0]));
 				break;
 			}
 			case WORD: {
-				StringBuilder b =
-						new StringBuilder(token.stringValue());
+				StringBuilder b = new StringBuilder(token.stringValue());
 				nextToken();
 				while (eat(DOT)) {
 					if (token.kind != WORD)
@@ -110,8 +166,7 @@ public class CompiledParser extends Parser {
 				String className = str.substring(0, i);
 				String funcName = str.substring(i + 1);
 				Class<?> clazz = Class.forName(className);
-				e = new ExpressionLiteral(
-						new MethodFunction(clazz, funcName));
+				e = new ExpressionLiteral(new MethodFunction(clazz, funcName));
 				break;
 			}
 			default:
@@ -146,12 +201,10 @@ public class CompiledParser extends Parser {
 					case LPAREN:
 					case LBRACE: {
 						Expression array = expr();
-						if (isVectorElem(array)
-								&& token.kind != LBRACKET) {
+						if (isVectorElem(array) && token.kind != LBRACKET) {
 							accept("TO");
 							Expression value = expr();
-							e = ((ExpressionReferenceable) array).toAssign(
-									value);
+							e = ((ExpressionReferenceable) array).toAssign(value);
 						} else {
 							accept(LBRACKET);
 							Expression idx1 = expr();
@@ -160,14 +213,13 @@ public class CompiledParser extends Parser {
 								accept(RBRACKET);
 								accept("TO");
 								Expression value = expr();
-								e = new ExpressionMatrixIndexAssign(
-										array, idx1, idx2, value);
+								e = new ExpressionMatrixIndexAssign(array, idx1,
+										idx2, value);
 							} else {
 								accept(RBRACKET);
 								accept("TO");
 								Expression value = expr();
-								e = new ExpressionIndexAssign(array,
-										idx1, value);
+								e = new ExpressionIndexAssign(array, idx1, value);
 							}
 						}
 						break;
@@ -181,8 +233,7 @@ public class CompiledParser extends Parser {
 							nextToken();
 							accept("TO");
 							Expression value = expr();
-							e = new ExpressionDimAssign(varname,
-									value);
+							e = new ExpressionDimAssign(varname, value);
 							break;
 						}
 					default:
@@ -200,16 +251,14 @@ public class CompiledParser extends Parser {
 					case STRING: {
 						String varname = token.stringValue();
 						nextToken();
-						e = new ExpressionAssignOp(varname, operator,
-								value);
+						e = new ExpressionAssignOp(varname, operator, value);
 						break;
 					}
 					case LT:
 					case LPAREN:
 					case LBRACE: {
 						Expression array = expr();
-						if (isVectorElem(array)
-								&& token.kind != LBRACKET) {
+						if (isVectorElem(array) && token.kind != LBRACKET) {
 							e = ((ExpressionReferenceable) array).toAssignOp(
 									operator, value);
 						} else {
@@ -218,13 +267,12 @@ public class CompiledParser extends Parser {
 							if (eat(COMMA)) {
 								Expression idx2 = expr();
 								accept(RBRACKET);
-								e = new ExpressionMatrixIndexAssignOp(
-										array, idx1, idx2, operator,
-										value);
+								e = new ExpressionMatrixIndexAssignOp(array, idx1,
+										idx2, operator, value);
 							} else {
 								accept(RBRACKET);
-								e = new ExpressionIndexAssignOp(array,
-										idx1, operator, value);
+								e = new ExpressionIndexAssignOp(array, idx1,
+										operator, value);
 							}
 						}
 						break;
@@ -242,18 +290,15 @@ public class CompiledParser extends Parser {
 					case STRING: {
 						String varname = token.stringValue();
 						nextToken();
-						e = inc? new ExpressionVarPrefixIncrement(
-								varname)
-								: new ExpressionVarPrefixDecrement(
-										varname);
+						e = inc? new ExpressionVarPrefixIncrement(varname)
+								: new ExpressionVarPrefixDecrement(varname);
 						break;
 					}
 					case LT:
 					case LPAREN:
 					case LBRACE: {
 						Expression array = expr();
-						if (isVectorElem(array)
-								&& token.kind != LBRACKET) {
+						if (isVectorElem(array) && token.kind != LBRACKET) {
 							ExpressionReferenceable ref =
 									(ExpressionReferenceable) array;
 							e = inc? ref.toPrefixIncrement()
@@ -270,10 +315,10 @@ public class CompiledParser extends Parser {
 												array, idx1, idx2);
 							} else {
 								accept(RBRACKET);
-								e = inc? new ExpressionIndexPrefixIncrement(
-										array, idx1)
-										: new ExpressionIndexPrefixDecrement(
-												array, idx1);
+								e = inc? new ExpressionIndexPrefixIncrement(array,
+										idx1)
+										: new ExpressionIndexPrefixDecrement(array,
+												idx1);
 							}
 						}
 						break;
@@ -294,8 +339,7 @@ public class CompiledParser extends Parser {
 				case "CHAIN": {
 					nextToken();
 					ArrayList<Expression> exprs = new ArrayList<>();
-					ArrayList<ExpressionComparisonChain.Op> ops =
-							new ArrayList<>();
+					ArrayList<ExpressionComparisonChain.Op> ops = new ArrayList<>();
 					exprs.add(expr());
 					do {
 						boolean elementWise = eat(DOT);
@@ -303,12 +347,11 @@ public class CompiledParser extends Parser {
 							throw new SyntaxError(token);
 						try {
 							EnumOperator operator =
-									EnumOperator.valueOf(
-											token.stringValue());
+									EnumOperator.valueOf(token.stringValue());
 							if (operator.cardinality != 2)
 								throw new SyntaxError(token);
-							ops.add(ExpressionComparisonChain.Op.of(
-									operator, elementWise));
+							ops.add(ExpressionComparisonChain.Op.of(operator,
+									elementWise));
 						} catch (IllegalArgumentException ex) {
 							throw new SyntaxError(token);
 						}
@@ -330,17 +373,14 @@ public class CompiledParser extends Parser {
 					} else
 						elsepart = null;
 					e = conditional
-							? new ExpressionConditional(cond, thenpart,
-									elsepart)
-							: new ExpressionIf(cond, thenpart,
-									elsepart);
+							? new ExpressionConditional(cond, thenpart, elsepart)
+							: new ExpressionIf(cond, thenpart, elsepart);
 					break;
 				}
 				case "FOR": {
 					nextToken();
 					if (token.kind != STRING)
-						throw new SyntaxError(token.pos, STRING,
-								token.kind);
+						throw new SyntaxError(token.pos, STRING, token.kind);
 					String varname = token.stringValue();
 					nextToken();
 					accept("FROM");
@@ -353,44 +393,38 @@ public class CompiledParser extends Parser {
 						increment = null;
 					accept("DO");
 					Expression body = expr();
-					e = new ExpressionFor(varname, start, end,
-							increment, body);
+					e = new ExpressionFor(varname, start, end, increment, body);
 					break;
 				}
 				case "FOREACH": {
 					nextToken();
 					if (token.kind != STRING)
-						throw new SyntaxError(token.pos, STRING,
-								token.kind);
+						throw new SyntaxError(token.pos, STRING, token.kind);
 					String varname = token.stringValue();
 					nextToken();
 					accept("IN");
 					Expression array = expr();
 					accept("DO");
 					Expression body = expr();
-					e = new ExpressionForEachSingle(varname, array,
-							body);
+					e = new ExpressionForEachSingle(varname, array, body);
 					break;
 				}
 				case "FOREACH2": {
 					nextToken();
 					if (token.kind != STRING)
-						throw new SyntaxError(token.pos, STRING,
-								token.kind);
+						throw new SyntaxError(token.pos, STRING, token.kind);
 					String varname1 = token.stringValue();
 					nextToken();
 					accept(COMMA);
 					if (token.kind != STRING)
-						throw new SyntaxError(token.pos, STRING,
-								token.kind);
+						throw new SyntaxError(token.pos, STRING, token.kind);
 					String varname2 = token.stringValue();
 					nextToken();
 					accept("IN");
 					Expression array = expr();
 					accept("DO");
 					Expression body = expr();
-					e = new ExpressionForEachDouble(varname1, varname2,
-							array, body);
+					e = new ExpressionForEachDouble(varname1, varname2, array, body);
 					break;
 				}
 				case "CALL": {
@@ -399,8 +433,7 @@ public class CompiledParser extends Parser {
 					Expression[] args = new Expression[0];
 					if (eat("WITH")) {
 						accept(LPAREN);
-						ArrayList<Expression> exprs =
-								new ArrayList<>();
+						ArrayList<Expression> exprs = new ArrayList<>();
 						do {
 							exprs.add(expr());
 						} while (eat(COMMA));
@@ -417,8 +450,7 @@ public class CompiledParser extends Parser {
 						funcname = null;
 					} else {
 						if (token.kind != STRING)
-							throw new SyntaxError(token.pos, STRING,
-									token.kind);
+							throw new SyntaxError(token.pos, STRING, token.kind);
 						funcname = token.stringValue();
 						nextToken();
 					}
@@ -434,11 +466,8 @@ public class CompiledParser extends Parser {
 					}
 					accept(RPAREN);
 					Expression body = expr();
-					e = new ExpressionFunctionDefinition(
-							new UserFunction(funcname,
-									argNamesList.toArray(
-											new String[0]),
-									body));
+					e = new ExpressionFunctionDefinition(new UserFunction(funcname,
+							argNamesList.toArray(new String[0]), body));
 					break;
 				}
 				case "MULTI": {
@@ -448,14 +477,12 @@ public class CompiledParser extends Parser {
 						exprsList.add(expr());
 						accept(SEMI);
 					}
-					e = new ExpressionMulti(
-							exprsList.toArray(new Expression[0]));
+					e = new ExpressionMulti(exprsList.toArray(new Expression[0]));
 					break;
 				}
 				case "MULTIPLY_CHAIN": {
 					nextToken();
-					ArrayList<Expression> exprsList =
-							new ArrayList<>();
+					ArrayList<Expression> exprsList = new ArrayList<>();
 					do {
 						exprsList.add(expr());
 					} while (eat(COMMA));
@@ -489,13 +516,19 @@ public class CompiledParser extends Parser {
 				case "DEL": {
 					nextToken();
 					if (token.kind != STRING)
-						throw new SyntaxError(token.pos, STRING,
-								token.kind);
-					e = new ExpressionDeleteVariable(
-							token.stringValue());
+						throw new SyntaxError(token.pos, STRING, token.kind);
+					e = new ExpressionDeleteVariable(token.stringValue());
 					nextToken();
 					break;
 				}
+				case "DELALL":
+					nextToken();
+					e = new ExpressionDeleteAll();
+					break;
+				case "DELLOCAL":
+					nextToken();
+					e = new ExpressionDeleteLocal();
+					break;
 				case "LOCAL": {
 					nextToken();
 					List<ExpressionLocal.Def> defs = new ArrayList<>();
@@ -514,8 +547,7 @@ public class CompiledParser extends Parser {
 				}
 				default:
 					try {
-						EnumOperator operator =
-								EnumOperator.valueOf(name);
+						EnumOperator operator = EnumOperator.valueOf(name);
 						nextToken();
 						switch (token.kind) {
 						case STRING: {
@@ -523,8 +555,7 @@ public class CompiledParser extends Parser {
 							nextToken();
 							accept(operator.getVerb());
 							Expression value = expr();
-							e = new ExpressionAssignOp(varname,
-									operator, value);
+							e = new ExpressionAssignOp(varname, operator, value);
 							break;
 						}
 						case LT:
@@ -538,25 +569,22 @@ public class CompiledParser extends Parser {
 									accept(RBRACKET);
 									accept(operator.getVerb());
 									Expression value = expr();
-									e = new ExpressionMatrixIndexAssignOp(
-											array, idx1, idx2,
-											operator, value);
+									e = new ExpressionMatrixIndexAssignOp(array,
+											idx1, idx2, operator, value);
 									
 								} else {
 									accept(RBRACKET);
 									accept(operator.getVerb());
 									Expression value = expr();
-									e = new ExpressionIndexAssignOp(
-											array, idx1, operator,
-											value);
+									e = new ExpressionIndexAssignOp(array, idx1,
+											operator, value);
 								}
 							} else {
 								if (token.kind != GT)
 									throw new SyntaxError(token);
 								if (operator.cardinality != 1)
 									throw new SyntaxError(token);
-								e = new ExpressionUnaryOperator(
-										operator, array);
+								e = new ExpressionUnaryOperator(operator, array);
 							}
 							break;
 						}
@@ -578,8 +606,7 @@ public class CompiledParser extends Parser {
 				case WORD: {
 					String name = token.stringValue();
 					if (isVectorElem(lhs)) {
-						ExpressionReferenceable ref =
-								(ExpressionReferenceable) lhs;
+						ExpressionReferenceable ref = (ExpressionReferenceable) lhs;
 						if (name.equals("INC")) {
 							e = ref.toPostfixIncrement();
 							nextToken();
@@ -591,14 +618,12 @@ public class CompiledParser extends Parser {
 						}
 					}
 					try {
-						EnumOperator operator =
-								EnumOperator.valueOf(name);
+						EnumOperator operator = EnumOperator.valueOf(name);
 						if (operator.cardinality != 2)
 							throw new SyntaxError(token);
 						nextToken();
 						Expression rhs = expr();
-						e = new ExpressionBinaryOperator(lhs, operator,
-								rhs);
+						e = new ExpressionBinaryOperator(lhs, operator, rhs);
 					} catch (IllegalArgumentException ex) {
 						throw new SyntaxError(token);
 					}
@@ -611,22 +636,20 @@ public class CompiledParser extends Parser {
 						Expression idx2 = expr();
 						accept(RBRACKET);
 						if (eat("INC")) {
-							e = new ExpressionMatrixIndexPostfixIncrement(
-									lhs, idx1, idx2);
+							e = new ExpressionMatrixIndexPostfixIncrement(lhs, idx1,
+									idx2);
 						} else {
 							accept("DEC");
-							e = new ExpressionMatrixIndexPostfixDecrement(
-									lhs, idx1, idx2);
+							e = new ExpressionMatrixIndexPostfixDecrement(lhs, idx1,
+									idx2);
 						}
 					} else {
 						accept(RBRACKET);
 						if (eat("INC")) {
-							e = new ExpressionIndexPostfixIncrement(
-									lhs, idx1);
+							e = new ExpressionIndexPostfixIncrement(lhs, idx1);
 						} else {
 							accept("DEC");
-							e = new ExpressionIndexPostfixDecrement(
-									lhs, idx1);
+							e = new ExpressionIndexPostfixDecrement(lhs, idx1);
 						}
 					}
 					break;
@@ -637,14 +660,13 @@ public class CompiledParser extends Parser {
 						throw new SyntaxError(token);
 					String name = token.stringValue();
 					try {
-						EnumOperator operator =
-								EnumOperator.valueOf(name);
+						EnumOperator operator = EnumOperator.valueOf(name);
 						if (operator.cardinality != 2)
 							throw new SyntaxError(token);
 						nextToken();
 						Expression rhs = expr();
-						e = new ExpressionElementwiseBinaryOperator(
-								lhs, operator, rhs);
+						e = new ExpressionElementwiseBinaryOperator(lhs, operator,
+								rhs);
 					} catch (IllegalArgumentException ex) {
 						throw new SyntaxError(token);
 					}
@@ -765,9 +787,8 @@ public class CompiledParser extends Parser {
 			}
 			accept(RPAREN);
 			Expression body = expr();
-			result = new ExpressionLocal.FuncDef(new UserFunction(
-					funcname, argNamesList.toArray(new String[0]),
-					body));
+			result = new ExpressionLocal.FuncDef(new UserFunction(funcname,
+					argNamesList.toArray(new String[0]), body));
 			break;
 		}
 		default:

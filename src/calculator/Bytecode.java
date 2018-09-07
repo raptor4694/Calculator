@@ -256,13 +256,17 @@ public @UtilityClass class Bytecode {
 	 */
 	public static final byte I = 46;
 	
-	public static final byte OPCODES_COUNT = 47;
+	/*
+	 * DELALL (0 = all, 1 = local)
+	 */
+	public static final byte DELALL = 47;
+	
+	public static final byte OPCODES_COUNT = 48;
 	
 	public static String nameOf(byte opcode) {
 		String value = OPCODE_TO_NAME.get(opcode);
 		if (value == null)
-			throw new IllegalArgumentException(
-					"No opcode for byte " + opcode);
+			throw new IllegalArgumentException("No opcode for byte " + opcode);
 		return value;
 	}
 	
@@ -275,8 +279,7 @@ public @UtilityClass class Bytecode {
 	}
 	
 	public static byte[] toByteArray(double d) {
-		return ByteBuffer.wrap(new byte[Double.BYTES]).putDouble(
-				d).array();
+		return ByteBuffer.wrap(new byte[Double.BYTES]).putDouble(d).array();
 	}
 	
 	public static double toDouble(byte[] bytes) {
@@ -290,18 +293,13 @@ public @UtilityClass class Bytecode {
 		HashMap<String, Byte> nameToOpcode = new HashMap<>();
 		HashMap<Byte, String> opcodeToName = new HashMap<>();
 		
-		final int validMods =
-				Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
+		final int validMods = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
 		for (Field field : Bytecode.class.getFields()) {
-			if (field.getModifiers() == validMods
-					&& field.getType() == byte.class) {
+			if (field.getModifiers() == validMods && field.getType() == byte.class) {
 				try {
-					nameToOpcode.put(field.getName(),
-							field.getByte(null));
-					opcodeToName.put(field.getByte(null),
-							field.getName());
-				} catch (IllegalArgumentException
-						| IllegalAccessException e) {
+					nameToOpcode.put(field.getName(), field.getByte(null));
+					opcodeToName.put(field.getByte(null), field.getName());
+				} catch (IllegalArgumentException | IllegalAccessException e) {
 					e.printStackTrace();
 				}
 			}

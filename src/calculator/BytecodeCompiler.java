@@ -4,9 +4,86 @@ import static calculator.Bytecode.*;
 
 import java.nio.ByteBuffer;
 
-import calculator.ExpressionLocal.DefImpl;
-import calculator.ExpressionLocal.DimDef;
-import calculator.ExpressionLocal.FuncDef;
+import calculator.expressions.Expression;
+import calculator.expressions.ExpressionAbs;
+import calculator.expressions.ExpressionArrayLiteral;
+import calculator.expressions.ExpressionAssign;
+import calculator.expressions.ExpressionAssignOp;
+import calculator.expressions.ExpressionBinaryOperator;
+import calculator.expressions.ExpressionBreak;
+import calculator.expressions.ExpressionColumnLiteral;
+import calculator.expressions.ExpressionComparisonChain;
+import calculator.expressions.ExpressionConditional;
+import calculator.expressions.ExpressionDeleteAll;
+import calculator.expressions.ExpressionDeleteLocal;
+import calculator.expressions.ExpressionDeleteVariable;
+import calculator.expressions.ExpressionDimAssign;
+import calculator.expressions.ExpressionDollar;
+import calculator.expressions.ExpressionElementwiseBinaryOperator;
+import calculator.expressions.ExpressionFor;
+import calculator.expressions.ExpressionForEachDouble;
+import calculator.expressions.ExpressionForEachSingle;
+import calculator.expressions.ExpressionFunctionCall;
+import calculator.expressions.ExpressionFunctionDefinition;
+import calculator.expressions.ExpressionIf;
+import calculator.expressions.ExpressionIndex;
+import calculator.expressions.ExpressionIndexAssign;
+import calculator.expressions.ExpressionIndexAssignOp;
+import calculator.expressions.ExpressionIndexPostfixDecrement;
+import calculator.expressions.ExpressionIndexPostfixIncrement;
+import calculator.expressions.ExpressionIndexPrefixDecrement;
+import calculator.expressions.ExpressionIndexPrefixIncrement;
+import calculator.expressions.ExpressionLiteral;
+import calculator.expressions.ExpressionLocal;
+import calculator.expressions.ExpressionLocal.DefImpl;
+import calculator.expressions.ExpressionLocal.DimDef;
+import calculator.expressions.ExpressionLocal.FuncDef;
+import calculator.expressions.ExpressionMatrixIndex;
+import calculator.expressions.ExpressionMatrixIndexAssign;
+import calculator.expressions.ExpressionMatrixIndexAssignOp;
+import calculator.expressions.ExpressionMatrixIndexPostfixDecrement;
+import calculator.expressions.ExpressionMatrixIndexPostfixIncrement;
+import calculator.expressions.ExpressionMatrixIndexPrefixDecrement;
+import calculator.expressions.ExpressionMatrixIndexPrefixIncrement;
+import calculator.expressions.ExpressionMulti;
+import calculator.expressions.ExpressionMultiplyChain;
+import calculator.expressions.ExpressionParenthesis;
+import calculator.expressions.ExpressionReturn;
+import calculator.expressions.ExpressionTry;
+import calculator.expressions.ExpressionUnaryOperator;
+import calculator.expressions.ExpressionVarPostfixDecrement;
+import calculator.expressions.ExpressionVarPostfixIncrement;
+import calculator.expressions.ExpressionVarPrefixDecrement;
+import calculator.expressions.ExpressionVarPrefixIncrement;
+import calculator.expressions.ExpressionVariable;
+import calculator.expressions.ExpressionWhile;
+import calculator.expressions.ExpressionX;
+import calculator.expressions.ExpressionXAssign;
+import calculator.expressions.ExpressionXAssignOp;
+import calculator.expressions.ExpressionXPostfixDecrement;
+import calculator.expressions.ExpressionXPostfixIncrement;
+import calculator.expressions.ExpressionXPrefixDecrement;
+import calculator.expressions.ExpressionXPrefixIncrement;
+import calculator.expressions.ExpressionY;
+import calculator.expressions.ExpressionYAssign;
+import calculator.expressions.ExpressionYAssignOp;
+import calculator.expressions.ExpressionYPostfixDecrement;
+import calculator.expressions.ExpressionYPostfixIncrement;
+import calculator.expressions.ExpressionYPrefixDecrement;
+import calculator.expressions.ExpressionYPrefixIncrement;
+import calculator.expressions.ExpressionZ;
+import calculator.expressions.ExpressionZAssign;
+import calculator.expressions.ExpressionZAssignOp;
+import calculator.expressions.ExpressionZPostfixDecrement;
+import calculator.expressions.ExpressionZPostfixIncrement;
+import calculator.expressions.ExpressionZPrefixDecrement;
+import calculator.expressions.ExpressionZPrefixIncrement;
+import calculator.values.Complex;
+import calculator.values.EnumOperator;
+import calculator.values.MethodFunction;
+import calculator.values.Number;
+import calculator.values.Real;
+import calculator.values.UserFunction;
 import lombok.SneakyThrows;
 
 public class BytecodeCompiler implements Visitor {
@@ -41,9 +118,9 @@ public class BytecodeCompiler implements Visitor {
 		buf.put(b);
 	}
 	
-	private void put(byte[] bytes) {
+	/*private void put(byte[] bytes) {
 		buf.put(bytes);
-	}
+	}*/
 	
 	private void putDouble(double d) {
 		if (d == (int) d) {
@@ -206,10 +283,10 @@ public class BytecodeCompiler implements Visitor {
 	public void visitFunctionDef(ExpressionFunctionDefinition expr) {
 		put(FUNCDEF);
 		UserFunction func = expr.function;
-		if (func.name == null)
+		if (func.getName() == null)
 			put(END);
 		else
-			putString(func.name);
+			putString(func.getName());
 		for (String arg : func.varnames) {
 			putString(arg);
 		}
@@ -327,7 +404,6 @@ public class BytecodeCompiler implements Visitor {
 	@Override
 	public void visitWhile(ExpressionWhile expr) {
 		put(WHILE);
-		put((byte) 0);
 		visitExpression(expr.condition);
 		visitExpression(expr.body);
 	}
@@ -352,7 +428,7 @@ public class BytecodeCompiler implements Visitor {
 	
 	@Override
 	public void visitDef(FuncDef expr) {
-		putString(expr.function.name);
+		putString(expr.function.getName());
 		put(FUNCDEF);
 		for (String arg : expr.function.varnames) {
 			putString(arg);
@@ -488,16 +564,14 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPrefixIncrement(
-			ExpressionVarPrefixIncrement expr) {
+	public void visitPrefixIncrement(ExpressionVarPrefixIncrement expr) {
 		put(PREFIX_INC);
 		put(VARIABLE);
 		putString(expr.variable);
 	}
 	
 	@Override
-	public void visitPrefixIncrement(
-			ExpressionIndexPrefixIncrement expr) {
+	public void visitPrefixIncrement(ExpressionIndexPrefixIncrement expr) {
 		put(PREFIX_INC);
 		put(INDEX);
 		visitExpression(expr.array);
@@ -505,8 +579,7 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPrefixIncrement(
-			ExpressionMatrixIndexPrefixIncrement expr) {
+	public void visitPrefixIncrement(ExpressionMatrixIndexPrefixIncrement expr) {
 		put(PREFIX_INC);
 		put(INDEX2);
 		visitExpression(expr.matrix);
@@ -536,16 +609,14 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPrefixDecrement(
-			ExpressionVarPrefixDecrement expr) {
+	public void visitPrefixDecrement(ExpressionVarPrefixDecrement expr) {
 		put(PREFIX_DEC);
 		put(VARIABLE);
 		putString(expr.variable);
 	}
 	
 	@Override
-	public void visitPrefixDecrement(
-			ExpressionIndexPrefixDecrement expr) {
+	public void visitPrefixDecrement(ExpressionIndexPrefixDecrement expr) {
 		put(PREFIX_DEC);
 		put(INDEX);
 		visitExpression(expr.array);
@@ -553,8 +624,7 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPrefixDecrement(
-			ExpressionMatrixIndexPrefixDecrement expr) {
+	public void visitPrefixDecrement(ExpressionMatrixIndexPrefixDecrement expr) {
 		put(PREFIX_DEC);
 		put(INDEX2);
 		visitExpression(expr.matrix);
@@ -584,16 +654,14 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPostfixIncrement(
-			ExpressionVarPostfixIncrement expr) {
+	public void visitPostfixIncrement(ExpressionVarPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(VARIABLE);
 		putString(expr.variable);
 	}
 	
 	@Override
-	public void visitPostfixIncrement(
-			ExpressionIndexPostfixIncrement expr) {
+	public void visitPostfixIncrement(ExpressionIndexPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(INDEX);
 		visitExpression(expr.array);
@@ -601,8 +669,7 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPostfixIncrement(
-			ExpressionMatrixIndexPostfixIncrement expr) {
+	public void visitPostfixIncrement(ExpressionMatrixIndexPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(INDEX2);
 		visitExpression(expr.matrix);
@@ -611,40 +678,35 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPostfixIncrement(
-			ExpressionXPostfixIncrement expr) {
+	public void visitPostfixIncrement(ExpressionXPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(VECTOR_X);
 		visitExpression(expr.array);
 	}
 	
 	@Override
-	public void visitPostfixIncrement(
-			ExpressionYPostfixIncrement expr) {
+	public void visitPostfixIncrement(ExpressionYPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(VECTOR_Y);
 		visitExpression(expr.array);
 	}
 	
 	@Override
-	public void visitPostfixIncrement(
-			ExpressionZPostfixIncrement expr) {
+	public void visitPostfixIncrement(ExpressionZPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(VECTOR_Z);
 		visitExpression(expr.array);
 	}
 	
 	@Override
-	public void visitPostfixDecrement(
-			ExpressionVarPostfixDecrement expr) {
+	public void visitPostfixDecrement(ExpressionVarPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(VARIABLE);
 		putString(expr.variable);
 	}
 	
 	@Override
-	public void visitPostfixDecrement(
-			ExpressionIndexPostfixDecrement expr) {
+	public void visitPostfixDecrement(ExpressionIndexPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(INDEX);
 		visitExpression(expr.array);
@@ -652,8 +714,7 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPostfixDecrement(
-			ExpressionMatrixIndexPostfixDecrement expr) {
+	public void visitPostfixDecrement(ExpressionMatrixIndexPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(INDEX2);
 		visitExpression(expr.matrix);
@@ -662,26 +723,35 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	@Override
-	public void visitPostfixDecrement(
-			ExpressionXPostfixDecrement expr) {
+	public void visitPostfixDecrement(ExpressionXPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(VECTOR_X);
 		visitExpression(expr.array);
 	}
 	
 	@Override
-	public void visitPostfixDecrement(
-			ExpressionYPostfixDecrement expr) {
+	public void visitPostfixDecrement(ExpressionYPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(VECTOR_Y);
 		visitExpression(expr.array);
 	}
 	
 	@Override
-	public void visitPostfixDecrement(
-			ExpressionZPostfixDecrement expr) {
+	public void visitPostfixDecrement(ExpressionZPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(VECTOR_Z);
 		visitExpression(expr.array);
+	}
+	
+	@Override
+	public void visitDeleteAll(ExpressionDeleteAll expr) {
+		put(DELALL);
+		putBool(true);
+	}
+	
+	@Override
+	public void visitDeleteLocal(ExpressionDeleteLocal expr) {
+		put(DELALL);
+		putBool(false);
 	}
 }

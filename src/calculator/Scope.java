@@ -10,11 +10,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import calculator.values.EnumOperator;
+import calculator.values.Function;
+import calculator.values.MethodFunction;
+import calculator.values.Real;
 import lombok.NonNull;
 
 public class Scope {
 	protected Map<String, Object> variables = new HashMap<>();
-	final Scope parent;
+	public final Scope parent;
+	protected boolean isTopLevel = false;
 	
 	public Scope() {
 		this(new TopLevelScope());
@@ -28,20 +33,22 @@ public class Scope {
 		parent = null;
 	}
 	
+	public void setTopLevel() {
+		isTopLevel = true;
+	}
+	
 	public boolean hasImmutableVariable(String varname) {
 		if ("ans".equals(varname))
 			return false;
 		if (variables.containsKey(varname)) {
 			Object obj = variables.get(varname);
-			return obj instanceof MethodFunction
-					|| obj instanceof EnumOperator;
+			return obj instanceof MethodFunction || obj instanceof EnumOperator;
 		} else
 			return parent.hasImmutableVariable(varname);
 	}
 	
 	public boolean hasVariable(String varname) {
-		return variables.containsKey(varname)
-				|| parent.hasVariable(varname);
+		return variables.containsKey(varname) || parent.hasVariable(varname);
 	}
 	
 	public boolean hasLocalVariable(String varname) {
@@ -59,12 +66,10 @@ public class Scope {
 		if (value == null)
 			return;
 		if (value instanceof java.lang.Number)
-			value = Real.valueOf(
-					((java.lang.Number) value).doubleValue());
+			value = Real.valueOf(((java.lang.Number) value).doubleValue());
 		if (hasVariable(varname)) {
 			Object result = getVariable(varname);
-			if ((result instanceof MethodFunction
-					|| result instanceof EnumOperator)
+			if ((result instanceof MethodFunction || result instanceof EnumOperator)
 					&& ((Function) result).getName().equals(varname))
 				throw new CannotRedefVarError(varname);
 			if (variables.containsKey(varname)) {
@@ -80,12 +85,10 @@ public class Scope {
 		if (value == null)
 			return;
 		if (value instanceof java.lang.Number)
-			value = Real.valueOf(
-					((java.lang.Number) value).doubleValue());
+			value = Real.valueOf(((java.lang.Number) value).doubleValue());
 		if (variables.containsKey(varname)) {
 			Object result = getVariable(varname);
-			if ((result instanceof MethodFunction
-					|| result instanceof EnumOperator)
+			if ((result instanceof MethodFunction || result instanceof EnumOperator)
 					&& ((Function) result).getName().equals(varname))
 				throw new CannotRedefVarError(varname);
 		}
@@ -104,6 +107,24 @@ public class Scope {
 		return parent.deleteVariable(varname);
 	}
 	
+	public void deleteAllVariables() {
+		Scope scope = this;
+		while (!scope.isTopLevel) {
+			scope.deleteLocalVariables();
+			scope = scope.parent;
+		}
+	}
+	
+	public void deleteLocalVariables() {
+		if (isTopLevel)
+			return;
+		for (String varName : new HashSet<>(localVarNames())) {
+			try {
+				deleteVariable(varName);
+			} catch (CannotRedefVarError e) {}
+		}
+	}
+	
 	public void with(Class<?> c) {
 		if (c.isPrimitive() || c.isArray())
 			throw new IllegalArgumentException(
@@ -114,11 +135,12 @@ public class Scope {
 			if (!names.contains(method.getName())) {
 				names.add(method.getName());
 				int mods = method.getModifiers();
-				if (Modifier.isStatic(mods)
-						&& Modifier.isPublic(mods)) {
+				if (Modifier.isStatic(mods) && Modifier.isPublic(mods)
+						&& (method.getAnnotation(func.class) != null
+								|| method.getAnnotation(operator.class) != null)) {
 					if (!hasVariable(method.getName())) {
-						MethodFunction func = new MethodFunction(c,
-								method.getName());
+						MethodFunction func =
+								new MethodFunction(c, method.getName());
 						setVariable(func.getName(), func);
 					}
 				}
@@ -132,8 +154,7 @@ public class Scope {
 	}
 	
 	public Collection<Object> values() {
-		Collection<Object> result =
-				new ArrayList<>(variables.values());
+		Collection<Object> result = new ArrayList<>(variables.values());
 		Scope parent = this.parent;
 		while (parent != null) {
 			result.addAll(parent.localValues());
@@ -160,6 +181,7 @@ public class Scope {
 		
 		private TopLevelScope() {
 			super(false);
+			isTopLevel = true;
 		}
 		
 		@Override
@@ -213,8 +235,7 @@ public class Scope {
 		
 		@Override
 		public Set<String> localVarNames() {
-			return Collections.unmodifiableSet(
-					EnumOperator.byLowerCase.keySet());
+			return Collections.unmodifiableSet(EnumOperator.byLowerCase.keySet());
 		}
 		
 		@Override
@@ -226,5 +247,9 @@ public class Scope {
 		public Set<String> varNames() {
 			return localVarNames();
 		}
+	}
+	
+	public boolean isTopLevel() {
+		return isTopLevel;
 	}
 }

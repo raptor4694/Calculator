@@ -42,6 +42,17 @@ public final class Eater {
 		}
 	}
 	
+	public int getLine() {
+		int line = 0;
+		for (int i = 0; i < pos; i++) {
+			if (codePoints[i] == '\r' && i + 1 < codePoints.length
+					&& codePoints[i + 1] != '\n' || codePoints[i] == '\n') {
+				++line;
+			}
+		}
+		return line;
+	}
+	
 	public void next() {
 		setPos(pos + 1);
 	}
@@ -76,8 +87,7 @@ public final class Eater {
 	public boolean eatWord(String s) {
 		if (pos + s.length() > length())
 			return false;
-		if (pos + s.length() < length()
-				&& isWordChar(codePoints[pos + s.length()]))
+		if (pos + s.length() < length() && isWordChar(codePoints[pos + s.length()]))
 			return false;
 		return eat(s);
 	}
@@ -92,7 +102,7 @@ public final class Eater {
 		while (isDigit(ch) || !dot && ch == '.') {
 			next();
 		}
-		if (eat('E')) {
+		if (eat('E') || eat('e')) {
 			if (!eat('-'))
 				eat('+');
 			while (isDigit(ch))
@@ -114,8 +124,7 @@ public final class Eater {
 	
 	public static boolean isWordChar(int c) {
 		return Character.isLetterOrDigit(c) || c == '_'
-				|| Character.UnicodeBlock.of(
-						c) == COMBINING_DIACRITICAL_MARKS;
+				|| Character.UnicodeBlock.of(c) == COMBINING_DIACRITICAL_MARKS;
 	}
 	
 	@Override

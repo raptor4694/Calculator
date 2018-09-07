@@ -30,7 +30,7 @@ public class Tokenizer {
 			return tokens.get(pos++);
 		} else if (eater.eof()) {
 			if (EOF == null) {
-				EOF = new Token(eater.getPos(), TokenKind.EOF);
+				EOF = new Token(eater.getPos(), eater.getLine(), TokenKind.EOF);
 				pos = tokens.size();
 				tokens.add(EOF);
 			}
@@ -59,54 +59,79 @@ public class Tokenizer {
 	}
 	
 	private Token parseToken() {
-		int pos = eater.getPos();
-		if (eater.isDigit(eater.getCh()) || eater.getCh() == '.'
-				&& eater.isDigit(eater.peek(1))) {
+		int pos = eater.getPos(), line = eater.getLine();
+		if (eater.isDigit(eater.getCh())
+				|| eater.getCh() == '.' && eater.isDigit(eater.peek(1))) {
 			double d = eater.nextNumber();
-			return new Token(pos, d);
+			return new Token(pos, line, d);
 		} else if (Eater.isWordChar(eater.getCh())) {
 			String word = eater.nextWord();
 			if (TokenKind.NAMED_TOKENS_MAP.containsKey(word)) {
 				TokenKind kind = TokenKind.NAMED_TOKENS_MAP.get(word);
 				if (word.charAt(0) != 'a'
-						&& TokenKind.Section.TRIG_FUNCTIONS.contains(
-								kind)) {
+						&& TokenKind.Section.TRIG_FUNCTIONS.contains(kind)) {
 					if (eater.eatWord("^-1")) {
-						kind = TokenKind.NAMED_TOKENS_MAP.get(
-								"a" + word);
+						kind = TokenKind.NAMED_TOKENS_MAP.get("a" + word);
 					}
 				}
-				return new Token(pos, kind);
+				return new Token(pos, line, kind);
 			}
-			return new Token(pos, word);
+			return new Token(pos, line, word);
 		} else if (eater.getCh() == '"') {
 			eater.next();
-			int startpos = eater.getPos();
+			// int startpos = eater.getPos();
 			boolean escape = false;
 			StringBuilder b = new StringBuilder();
 			while (!eater.eof() && (escape || eater.getCh() != '"')) {
-				if (eater.getCh() == '\\') {
-					if (escape)
+				if (escape) {
+					switch (eater.getCh()) {
+					case '\\':
 						b.append('\\');
-					escape = !escape;
-				} else {
-					b.appendCodePoint(eater.getCh());
+						break;
+					case 'n':
+						b.append('\n');
+						break;
+					case 't':
+						b.append('\t');
+						break;
+					case '"':
+					case '\'':
+						b.appendCodePoint(eater.getCh());
+						break;
+					default:
+						b.append('\\');
+						b.appendCodePoint(eater.getCh());
+					}
 					escape = false;
+					/*if (eater.getCh() == '\\') {
+						if (escape)
+							b.append('\\');
+						escape = !escape;*/
+				} else {
+					if (eater.getCh() == '\\')
+						escape = true;
+					else
+						b.appendCodePoint(eater.getCh());
+					
 				}
 				
 				eater.next();
 			}
+			
+			if (escape)
+				b.append('\\');
+			
+			if (!eater.eat('"'))
+				throw new SyntaxError(eater.getPos(), "Unclosed string literal");
+			
 			String str = b.toString();
-			eater.next();
-			return new Token(pos, TokenKind.STRING, str);
+			return new Token(pos, line, TokenKind.STRING, str);
 		} else {
 			for (TokenKind kind : TokenKind.SORTED_VALS) {
 				
-				if (Character.isLetter(
-						kind.symbol.charAt(kind.symbol.length() - 1))
-								? eater.eatWord(kind.symbol)
-								: eater.eat(kind.symbol)) {
-					return new Token(pos, kind);
+				if (Character.isLetter(kind.symbol.charAt(kind.symbol.length() - 1))
+						? eater.eatWord(kind.symbol) : eater.eat(kind.symbol)) {
+					return new Token(pos, line, kind);
 				}
 			}
 			throw new SyntaxError(pos, eater.getCh());
