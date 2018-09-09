@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
+import javax.measure.converter.ConversionException;
+
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionBreak;
 import calculator.expressions.ExpressionDeleteVariable;
@@ -718,7 +720,7 @@ public @UtilityClass class Console {
 			first = true;
 			eval1(e);
 			first = false;
-		} catch (CalculatorError e) {
+		} catch (CalculatorError | ConversionException e) {
 			println(e.toString());
 			lastError = e;
 		}

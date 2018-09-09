@@ -5,6 +5,9 @@ import static calculator.functions.Functions.*;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
+import javax.measure.converter.ConversionException;
+import javax.measure.unit.Unit;
+
 import calculator.DimensionError;
 import calculator.Printer;
 import calculator.TypeError;
@@ -24,10 +27,10 @@ public @UtilityClass class Operators {
 	public Number factorial(Real r) {
 		check(r.isInt(), TypeError.class);
 		
-		check(r.value >= 0, DimensionError.class);
-		if (r.value == 0 || r.value == 1)
+		check(r.doubleValue() >= 0, DimensionError.class);
+		if (r.doubleValue() == 0 || r.doubleValue() == 1)
 			return r;
-		return Real.valueOf(factorial(r.intValue()));
+		return Real.valueOf(factorial(r.intValue()), r.getUnit());
 	}
 	
 	int factorial(int i) {
@@ -63,7 +66,7 @@ public @UtilityClass class Operators {
 	@operator
 	@func("percentage (divides by 100)")
 	public Real percent(Real d) {
-		return Real.valueOf(d.value / 100);
+		return Real.valueOf(d.doubleValue() / 100, d.getUnit());
 	}
 	
 	@operator
@@ -115,7 +118,10 @@ public @UtilityClass class Operators {
 	
 	@operator(reversible = true)
 	public Number add(Real r, Complex c) {
-		return Complex.valueOf(r.value + c.real, c.imag);
+		if (r.getUnit() != Unit.ONE) {
+			throw new ConversionException();
+		}
+		return Complex.valueOf(r.doubleValue() + c.real, c.imag);
 	}
 	
 	@operator
@@ -125,7 +131,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number add(Real a, Real b) {
-		return Real.valueOf(a.value + b.value);
+		return Real.valueOf(a.value.plus(b.value));
 	}
 	
 	Number add(Number a, Number b) {
@@ -181,12 +187,14 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number subtract(Real r, Complex c) {
-		return Complex.valueOf(r.value - c.real, c.imag);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.valueOf(r.doubleValue() - c.real, c.imag);
 	}
 	
 	@operator
 	public Number subtract(Complex c, Real r) {
-		return Complex.valueOf(c.real - r.value, c.imag);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.valueOf(c.real - r.doubleValue(), c.imag);
 	}
 	
 	@operator
@@ -196,7 +204,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number subtract(Real a, Real b) {
-		return Real.valueOf(a.value - b.value);
+		return Real.valueOf(a.value.minus(b.value));
 	}
 	
 	Number subtract(Number a, Number b) {
@@ -217,7 +225,8 @@ public @UtilityClass class Operators {
 	
 	@operator(reversible = true)
 	public Number multiply(Real r, Complex c) {
-		return Complex.valueOf(r.value * c.real, r.value * c.imag);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.valueOf(r.doubleValue() * c.real, r.doubleValue() * c.imag);
 	}
 	
 	@operator
@@ -227,7 +236,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number multiply(Real a, Real b) {
-		return Real.valueOf(a.value * b.value);
+		return Real.valueOf(a.value.times(b.value));
 	}
 	
 	Number multiply(Number a, Number b) {
@@ -248,12 +257,14 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number divide(Real r, Complex c) {
-		return Complex.divide(r.value, 0.0, c.real, c.imag);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.divide(r.doubleValue(), 0.0, c.real, c.imag);
 	}
 	
 	@operator
 	public Number divide(Complex c, Real r) {
-		return Complex.divide(c.real, c.imag, r.value, 0.0);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.divide(c.real, c.imag, r.doubleValue(), 0.0);
 	}
 	
 	@operator
@@ -263,7 +274,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number divide(Real a, Real b) {
-		return Real.valueOf(a.value / b.value);
+		return Real.valueOf(a.value.divide(b.value));
 	}
 	
 	Number divide(Number a, Number b) {
@@ -284,12 +295,14 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number pow(Real r, Complex c) {
-		return Complex.pow(r.value, 0.0, c.real, c.imag);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.pow(r.doubleValue(), 0.0, c.real, c.imag);
 	}
 	
 	@operator
 	public Number pow(Complex c, Real r) {
-		return Complex.pow(c.real, c.imag, r.value, 0.0);
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Complex.pow(c.real, c.imag, r.doubleValue(), 0.0);
 	}
 	
 	@operator
@@ -299,7 +312,13 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number pow(Real a, Real b) {
-		return Real.valueOf(Math.pow(a.value, b.value));
+		check(b.getUnit() == Unit.ONE, ConversionException.class);
+		if (a.getUnit() == Unit.ONE)
+			return Real.valueOf(Math.pow(a.doubleValue(), b.doubleValue()));
+		else if (b.intValue() != b.doubleValue())
+			throw new TypeError();
+		else
+			return Real.valueOf(a.value.pow(b.intValue()));
 	}
 	
 	Number pow(Number a, Number b) {
@@ -632,14 +651,18 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number mod(Real a, Real b) {
-		if (areInts(a, b)) {
-			return Real.valueOf(castInt(a) % castInt(b));
-		} else {
-			BigDecimal A = BigDecimal.valueOf(a.value);
-			BigDecimal B = BigDecimal.valueOf(b.value);
-			
-			return Real.valueOf(A.remainder(B, new MathContext(15)).doubleValue());
-		}
+		if (a.getUnit() == Unit.ONE && b.getUnit() == Unit.ONE) {
+			if (areInts(a, b)) {
+				return Real.valueOf(castInt(a) % castInt(b));
+			} else {
+				BigDecimal A = BigDecimal.valueOf(a.doubleValue());
+				BigDecimal B = BigDecimal.valueOf(b.doubleValue());
+				
+				return Real.valueOf(
+						A.remainder(B, new MathContext(15)).doubleValue());
+			}
+		} else
+			return Real.valueOf(a.value.divide(b.value));
 	}
 	
 	@operator
@@ -767,7 +790,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater(Real a, Real b) {
-		return toNumber(a.value > b.value);
+		return toNumber(a.value.isGreaterThan(b.value));
 	}
 	
 	@operator
@@ -776,7 +799,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (castDouble(d) <= value.value)
+			if (((Real) d).compareTo(value) <= 0)
 				return Real.ZERO;
 		}
 		
@@ -789,7 +812,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (value.value <= castDouble(d))
+			if (value.compareTo((Real) d) <= 0)
 				return Real.ZERO;
 		}
 		
@@ -820,7 +843,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (castDouble(d) <= value.value)
+				if (((Real) d).compareTo(value) <= 0)
 					return Real.ZERO;
 			}
 		}
@@ -835,7 +858,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (value.value <= castDouble(d))
+				if (value.compareTo((Real) d) <= 0)
 					return Real.ZERO;
 			}
 		}
@@ -866,7 +889,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number greater_equal(Real a, Real b) {
-		return toNumber(a.value >= b.value);
+		return toNumber(a.compareTo(b) >= 0);
 	}
 	
 	@operator
@@ -875,7 +898,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (castDouble(d) < value.value)
+			if (((Real) d).compareTo(value) < 0)
 				return Real.ZERO;
 		}
 		
@@ -888,7 +911,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (value.value < castDouble(d))
+			if (value.compareTo((Real) d) < 0)
 				return Real.ZERO;
 		}
 		
@@ -903,7 +926,7 @@ public @UtilityClass class Operators {
 			for (Number d2 : b) {
 				check(d1 instanceof Real, TypeError.class);
 				check(d2 instanceof Real, TypeError.class);
-				if (castDouble(d1) < castDouble(d2))
+				if (((Real) d1).compareTo((Real) d2) < 0)
 					return Real.ZERO;
 			}
 		}
@@ -918,7 +941,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (castDouble(d) < value.value)
+				if (((Real) d).compareTo(value) < 0)
 					return Real.ZERO;
 			}
 		}
@@ -933,7 +956,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (value.value < castDouble(d))
+				if (value.compareTo((Real) d) < 0)
 					return Real.ZERO;
 			}
 		}
@@ -953,7 +976,7 @@ public @UtilityClass class Operators {
 			for (Number b : b_arr) {
 				check(a instanceof Real, TypeError.class);
 				check(b instanceof Real, TypeError.class);
-				if (castDouble(a) < castDouble(b))
+				if (((Real)a).compareTo((Real)b) < 0)
 					return Real.ZERO;
 			}
 		}
@@ -964,7 +987,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser(Real a, Real b) {
-		return toNumber(a.value < b.value);
+		return toNumber(a.compareTo(b) < 0);
 	}
 	
 	@operator
@@ -973,7 +996,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (castDouble(d) >= value.value)
+			if (((Real) d).compareTo(value) >= 0)
 				return Real.ZERO;
 		}
 		
@@ -985,7 +1008,8 @@ public @UtilityClass class Operators {
 		check(array.length > 0, DimensionError.class);
 		
 		for (Number d : array) {
-			if (value.value >= castDouble(d))
+			check(d instanceof Real, TypeError.class);
+			if (value.compareTo((Real) d) >= 0)
 				return Real.ZERO;
 		}
 		
@@ -1001,7 +1025,7 @@ public @UtilityClass class Operators {
 				check(d1 instanceof Real, TypeError.class);
 				check(d2 instanceof Real, TypeError.class);
 				
-				if (castDouble(d1) >= castDouble(d2))
+				if (((Real) d1).compareTo((Real) d2) >= 0)
 					return Real.ZERO;
 			}
 		}
@@ -1016,7 +1040,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (castDouble(d) >= value.value)
+				if (((Real) d).compareTo(value) >= 0)
 					return Real.ZERO;
 			}
 		}
@@ -1031,7 +1055,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (value.value >= castDouble(d))
+				if (value.compareTo((Real) d) >= 0)
 					return Real.ZERO;
 			}
 		}
@@ -1051,7 +1075,7 @@ public @UtilityClass class Operators {
 			for (Number b : b_arr) {
 				check(a instanceof Real, TypeError.class);
 				check(b instanceof Real, TypeError.class);
-				if (castDouble(a) >= castDouble(b))
+				if (((Real)a).compareTo((Real)b) >= 0)
 					return Real.ZERO;
 			}
 		}
@@ -1062,7 +1086,7 @@ public @UtilityClass class Operators {
 	
 	@operator
 	public Number lesser_equal(Real a, Real b) {
-		return toNumber(a.value <= b.value);
+		return toNumber(a.compareTo(b) <= 0);
 	}
 	
 	@operator
@@ -1071,7 +1095,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (castDouble(d) > value.value)
+			if (((Real) d).compareTo(value) > 0)
 				return Real.ZERO;
 		}
 		
@@ -1084,7 +1108,7 @@ public @UtilityClass class Operators {
 		
 		for (Number d : array) {
 			check(d instanceof Real, TypeError.class);
-			if (value.value > castDouble(d))
+			if (value.compareTo((Real) d) > 0)
 				return Real.ZERO;
 		}
 		
@@ -1100,7 +1124,7 @@ public @UtilityClass class Operators {
 				check(d1 instanceof Real, TypeError.class);
 				check(d2 instanceof Real, TypeError.class);
 				
-				if (castDouble(d1) > castDouble(d2))
+				if (((Real) d1).compareTo((Real) d2) > 0)
 					return Real.ZERO;
 			}
 		}
@@ -1116,7 +1140,7 @@ public @UtilityClass class Operators {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
 				
-				if (castDouble(d) > value.value)
+				if (((Real) d).compareTo(value) > 0)
 					return Real.ZERO;
 			}
 		}
@@ -1131,7 +1155,7 @@ public @UtilityClass class Operators {
 		for (Number[] array : matrix) {
 			for (Number d : array) {
 				check(d instanceof Real, TypeError.class);
-				if (value.value > castDouble(d))
+				if (value.compareTo((Real) d) > 0)
 					return Real.ZERO;
 			}
 		}
@@ -1152,7 +1176,7 @@ public @UtilityClass class Operators {
 				check(a instanceof Real, TypeError.class);
 				check(b instanceof Real, TypeError.class);
 				
-				if (castDouble(a) > castDouble(b))
+				if (((Real)a).compareTo((Real)b) > 0)
 					return Real.ZERO;
 			}
 		}

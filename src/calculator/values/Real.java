@@ -1,22 +1,21 @@
 package calculator.values;
 
-import java.util.HashMap;
-import java.util.Map;
+import javax.measure.unit.Unit;
+
+import org.jscience.physics.amount.Amount;
 
 import calculator.functions.Operators;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class Real implements Number {
-	private static final Map<Double, Real> interns = new HashMap<>();
+//@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+public class Real implements Number, Comparable<Real> {
+	// private static final Map<Double, Real> interns = new HashMap<>();
 	public static final Real NaN = new Real(Double.NaN), ZERO = new Real(0.0),
 			ONE = new Real(1.0), E = new Real(Math.E), PI = new Real(Math.PI),
 			TWO = new Real(2.0), ONE_HALF = new Real(0.5),
 			LN_10 = new Real(Math.log(10)),
 			INFINITY = new Real(Double.POSITIVE_INFINITY);
 	
-	static {
+	/*static {
 		interns.put(Double.NaN, NaN);
 		interns.put(0.0, ZERO);
 		interns.put(1.0, ONE);
@@ -26,6 +25,12 @@ public class Real implements Number {
 		interns.put(0.5, ONE_HALF);
 		interns.put(LN_10.value, LN_10);
 		interns.put(Double.POSITIVE_INFINITY, INFINITY);
+	}*/
+	
+	public static Real valueOf(double d, Unit<?> unit) {
+		if (unit == Unit.ONE)
+			return valueOf(d);
+		return new Real(d, unit);
 	}
 	
 	public static Real valueOf(double d) {
@@ -43,25 +48,47 @@ public class Real implements Number {
 			return PI;
 		if (d == Math.E)
 			return E;
-		if (d == LN_10.value)
+		if (d == LN_10.doubleValue())
 			return LN_10;
 		if (d == Double.POSITIVE_INFINITY)
 			return INFINITY;
-		Real result = interns.get(d);
+		/*Real result = interns.get(d);
 		if (result == null) {
 			interns.put(d, result = new Real(d));
 		}
-		return result;
+		return result;*/
+		return new Real(Amount.valueOf(d, Unit.ONE));
 	}
 	
-	public final double value;
+	public static Real valueOf(Amount amount) {
+		return new Real(amount);
+	}
 	
-	public double doubleValue() {
+	public final Amount value;
+	
+	private Real(Amount amt) {
+		value = amt;
+	}
+	
+	private Real(double d) {
+		this(d, Unit.ONE);
+	}
+	
+	private Real(double d, Unit<?> unit) {
+		this(Amount.valueOf(d, unit));
+	}
+	
+	public Amount getAmount() {
 		return value;
 	}
 	
+	@Deprecated
+	public double doubleValue() {
+		return value.getEstimatedValue();
+	}
+	
 	public int intValue() {
-		return (int) value;
+		return (int) value.getEstimatedValue();
 	}
 	
 	public boolean isInt() {
@@ -70,27 +97,28 @@ public class Real implements Number {
 	
 	@Override
 	public String toString() {
-		if (isInt())
-			return Integer.toString(intValue());
-		else
-			return Double.toString(value);
+		String s = String.valueOf(doubleValue());
+		if (getUnit() != Unit.ONE) {
+			s += " " + getUnit().toString();
+		}
+		return s;
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof Real)
-			return value == ((Real) obj).value;
+			return value.approximates(((Real) obj).value);
 		return false;
 	}
 	
 	@Override
 	public Real negate() {
-		return valueOf(-value);
+		return valueOf(value.times(-1));
 	}
 	
 	@Override
-	public Number abs() {
-		return value < 0? valueOf(-value) : this;
+	public Real abs() {
+		return valueOf(value.abs());
 	}
 	
 	@Override
@@ -141,6 +169,17 @@ public class Real implements Number {
 	@Override
 	public Number pow(Complex c) {
 		return Operators.pow(this, c);
+	}
+	
+	public Unit<?> getUnit() {
+		return value.getUnit();
+	}
+	
+	@Override
+	public int compareTo(Real c1) {
+		if (equals(c1))
+			return 0;
+		return value.compareTo(c1.value.to(value.getUnit()));
 	}
 	
 }

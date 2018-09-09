@@ -133,7 +133,6 @@ public class Scope {
 		Set<String> names = new HashSet<>();
 		for (Method method : c.getDeclaredMethods()) {
 			if (!names.contains(method.getName())) {
-				names.add(method.getName());
 				int mods = method.getModifiers();
 				if (Modifier.isStatic(mods) && Modifier.isPublic(mods)
 						&& (method.getAnnotation(func.class) != null
@@ -143,6 +142,7 @@ public class Scope {
 								new MethodFunction(c, method.getName());
 						setVariable(func.getName(), func);
 					}
+					names.add(method.getName());
 				}
 			}
 		}

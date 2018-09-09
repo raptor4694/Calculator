@@ -94,7 +94,7 @@ public class ExpressionLiteral implements Expression {
 	
 	private static String toString(Number n) {
 		if (n instanceof Real)
-			return "Real{value=%s}".format(Double.valueOf(((Real) n).value));
+			return "Real{value=%s}".format(((Real) n).value);
 		else
 			return "Complex{real=%s,imag=%s}".format(
 					Double.valueOf(((Complex) n).real),
@@ -140,3 +140,4 @@ public class ExpressionLiteral implements Expression {
 	}
 	
 }
+/**/

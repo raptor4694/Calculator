@@ -11,6 +11,11 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.function.Supplier;
 
+import javax.measure.converter.ConversionException;
+import javax.measure.unit.NonSI;
+import javax.measure.unit.SI;
+import javax.measure.unit.Unit;
+
 import calculator.CalculatorError;
 import calculator.DimensionError;
 import calculator.TypeError;
@@ -116,9 +121,10 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number ln(Real r) {
-		if (r.value <= 0)
-			return Complex.ln(r.value, 0.0);
-		return Real.valueOf(Math.log(r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		if (r.doubleValue() <= 0)
+			return Complex.ln(r.doubleValue(), 0.0);
+		return Real.valueOf(Math.log(r.doubleValue()), r.getUnit());
 	}
 	
 	public static Number ln(Number n) {
@@ -130,9 +136,10 @@ public @UtilityClass class Functions {
 	
 	@func("sets the seed to use in the random number generator")
 	public void setRandomSeed(@param("int") Real seed) {
-		check(seed.value == (long) seed.value, TypeError.class);
+		check(seed.getUnit() == Unit.ONE, ConversionException.class);
+		check(seed.doubleValue() == (long) seed.doubleValue(), TypeError.class);
 		
-		rand.setSeed((long) seed.value);
+		rand.setSeed((long) seed.doubleValue());
 	}
 	
 	@func("returns random, uniformly-distributed number between 0 and 1")
@@ -580,7 +587,7 @@ public @UtilityClass class Functions {
 			Real c1 = Real.ZERO;
 			for (int j = 0; j < n; ++j) {
 				Real c0 = abs(a[i][j]);
-				if (c0.value > c1.value)
+				if (c0.compareTo(c1) > 0)
 					c1 = c0;
 			}
 			c[i] = c1;
@@ -594,7 +601,7 @@ public @UtilityClass class Functions {
 				Number pi0 = abs(a[index[i]][j]);
 				pi0 = pi0.divide(c[index[i]]);
 				check(pi0 instanceof Real, TypeError.class);
-				if (((Real) pi0).value > pi1.value) {
+				if (((Real) pi0).compareTo(pi1) > 0) {
 					pi1 = (Real) pi0;
 					k = i;
 				}
@@ -770,22 +777,25 @@ public @UtilityClass class Functions {
 	}
 	
 	@func("round to nearest whole number")
-	public double round(Real d) {
-		return Math.round(d.value);
+	public Real round(Real d) {
+		return Real.valueOf(Math.round(d.doubleValue()), d.getUnit());
 	}
 	
 	@func("round to nearest number of decimals")
-	public double round(Real d, @param("int") Real numDecimals) {
+	public Real round(Real d, @param("int") Real numDecimals) {
 		check(isInt(numDecimals), TypeError.class);
-		check(numDecimals.value >= 0, DimensionError.class);
-		BigDecimal bd = BigDecimal.valueOf(d.value);
-		return bd.round(new MathContext(castInt(numDecimals) + 1)).doubleValue();
+		check(numDecimals.doubleValue() >= 0, DimensionError.class);
+		BigDecimal bd = BigDecimal.valueOf(d.doubleValue());
+		return Real.valueOf(
+				bd.round(new MathContext(castInt(numDecimals) + 1)).doubleValue(),
+				d.getUnit());
 	}
 	
-	double round(Real d, int numDecimals) {
+	Real round(Real d, int numDecimals) {
 		check(numDecimals >= 0, DimensionError.class);
-		BigDecimal bd = BigDecimal.valueOf(d.value);
-		return bd.round(new MathContext(numDecimals)).doubleValue();
+		BigDecimal bd = BigDecimal.valueOf(d.doubleValue());
+		return Real.valueOf(bd.round(new MathContext(numDecimals)).doubleValue(),
+				d.getUnit());
 	}
 	
 	public double round(double d, int numDecimals) {
@@ -796,7 +806,7 @@ public @UtilityClass class Functions {
 	
 	@func("e^x")
 	public Number exp(Real x) {
-		return Real.valueOf(Math.exp(x.value));
+		return Real.valueOf(Math.exp(x.doubleValue()), x.getUnit());
 	}
 	
 	Number exp(Number x) {
@@ -808,15 +818,16 @@ public @UtilityClass class Functions {
 	
 	@func("(e^x) - 1")
 	public Real expm1(Real d) {
-		return Real.valueOf(Math.expm1(d.value));
+		return Real.valueOf(Math.expm1(d.doubleValue()), d.getUnit());
 	}
 	
 	@func("log base 10")
 	public Number log(Real d) {
-		if (d.value <= 0.0) {
-			return Complex.ln(d.value, 0).divide(Real.LN_10);
+		if (d.doubleValue() <= 0) {
+			check(d.getUnit() == Unit.ONE, ConversionException.class);
+			return Complex.ln(d.doubleValue(), 0).divide(Real.LN_10);
 		} else
-			return Real.valueOf(Math.log(d.value));
+			return Real.valueOf(Math.log(d.doubleValue()), d.getUnit());
 	}
 	
 	@func
@@ -826,19 +837,21 @@ public @UtilityClass class Functions {
 	
 	@func("greatest neighboring whole number")
 	public Number ceil(Real d) {
-		return Real.valueOf(Math.ceil(d.value));
+		return Real.valueOf(Math.ceil(d.doubleValue()), d.getUnit());
 	}
 	
 	@func("lowest neighboring whole number")
 	public Number floor(Real d) {
-		return Real.valueOf(Math.floor(d.value));
+		return Real.valueOf(Math.floor(d.doubleValue()), d.getUnit());
 	}
 	
 	@func("square root")
 	public Number sqrt(Real r) {
-		if (r.value < 0)
-			return Complex.valueOf(Math.sqrt(-r.value), 1);
-		return Real.valueOf(Math.sqrt(r.value));
+		if (r.doubleValue() < 0) {
+			check(r.getUnit() == Unit.ONE, ConversionException.class);
+			return Complex.valueOf(Math.sqrt(-r.doubleValue()), 1);
+		}
+		return Real.valueOf(Math.sqrt(r.doubleValue()), r.getUnit());
 	}
 	
 	@func
@@ -854,7 +867,7 @@ public @UtilityClass class Functions {
 	
 	@func("cube root")
 	public Number cbrt(Real d) {
-		return Real.valueOf(Math.cbrt(d.value));
+		return Real.valueOf(Math.cbrt(d.doubleValue()), d.getUnit());
 	}
 	
 	@func
@@ -864,12 +877,12 @@ public @UtilityClass class Functions {
 	
 	@func("greater of two numbers")
 	public Number max(Real a, Real b) {
-		return a.value > b.value? a : b;
+		return a.compareTo(b) > 0? a : b;
 	}
 	
 	@func("lesser of two numbers")
 	public Number min(Real a, Real b) {
-		return a.value < b.value? a : b;
+		return a.compareTo(b) > 0? a : b;
 	}
 	
 	@func("greatest in set of numbers")
@@ -902,7 +915,7 @@ public @UtilityClass class Functions {
 	
 	@func("absolute value")
 	public Real abs(Real d) {
-		return Real.valueOf(Math.abs(d.value));
+		return d.abs();
 	}
 	
 	@func
@@ -918,34 +931,51 @@ public @UtilityClass class Functions {
 	}
 	
 	@func("convert degrees to radians")
-	public Number toRadians(Real degrees) {
-		return Real.valueOf(Math.toRadians(degrees.value));
+	public Real toRadians(Real degrees) {
+		if (degrees.getUnit() == SI.RADIAN)
+			return degrees;
+		if (degrees.getUnit() == Unit.ONE)
+			return Real.valueOf(Math.toRadians(degrees.doubleValue()), SI.RADIAN);
+		return Real.valueOf(degrees.value.to(SI.RADIAN));
 	}
 	
 	@func("convert radians to degrees")
-	public Number toDegrees(Real radians) {
-		return Real.valueOf(Math.toDegrees(radians.value));
+	public Real toDegrees(Real radians) {
+		if (radians.getUnit() == NonSI.DEGREE_ANGLE)
+			return radians;
+		if (radians.getUnit() == Unit.ONE)
+			return Real.valueOf(Math.toDegrees(radians.doubleValue()),
+					NonSI.DEGREE_ANGLE);
+		return Real.valueOf(radians.value.to(NonSI.DEGREE_ANGLE));
 	}
 	
 	@func("inverse hyperbolic sine")
 	public Number asinh(Real d) {
-		return Real.valueOf(Math.log(Math.sqrt(d.value * d.value + 1) + d.value));
+		check(d.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.log(
+				Math.sqrt(d.doubleValue() * d.doubleValue() + 1) + d.doubleValue()));
 	}
 	
 	@func("inverse hyperbolic cosine")
 	public Number acosh(Real d) {
-		return Real.valueOf(
-				Math.log(d.value + Math.sqrt(d.value - 1) * Math.sqrt(d.value + 1)));
+		d = toRadians(d);
+		return Real.valueOf(Math.log(d.doubleValue()
+				+ Math.sqrt(d.doubleValue() - 1) * Math.sqrt(d.doubleValue() + 1)));
 	}
 	
 	@func("inverse hyperbolic tangent")
 	public Number atanh(Real d) {
-		return Real.valueOf(0.5 * (Math.log(d.value + 1) - Math.log(1 - d.value)));
+		check(d.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(0.5
+				* (Math.log(d.doubleValue() + 1) - Math.log(1 - d.doubleValue())),
+				SI.RADIAN);
 	}
 	
 	@func("exact inverse hyperbolic tanget")
 	public Number atan(Real y, Real x) {
-		return Real.valueOf(Math.atan2(y.value, x.value));
+		check(x.getUnit() == Unit.ONE, ConversionException.class);
+		check(y.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.atan2(y.doubleValue(), x.doubleValue()), SI.RADIAN);
 	}
 	
 	@func("exact inverse cotanget")
@@ -955,7 +985,8 @@ public @UtilityClass class Functions {
 	
 	@func("sine")
 	public Number sin(Real r) {
-		return Real.valueOf(Math.sin(r.value));
+		r = toRadians(r);
+		return Real.valueOf(Math.sin(r.doubleValue()));
 	}
 	
 	@func
@@ -997,7 +1028,8 @@ public @UtilityClass class Functions {
 	
 	@func("inverse sine")
 	public Number asin(Real r) {
-		return Real.valueOf(Math.asin(r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.asin(r.doubleValue()), SI.RADIAN);
 	}
 	
 	@func
@@ -1039,7 +1071,8 @@ public @UtilityClass class Functions {
 	
 	@func("hyperbolic sine")
 	public Number sinh(Real r) {
-		return Real.valueOf(Math.sinh(r.value));
+		r = toRadians(r);
+		return Real.valueOf(Math.sinh(r.doubleValue()));
 	}
 	
 	@func
@@ -1078,11 +1111,6 @@ public @UtilityClass class Functions {
 		}
 		return result;
 	}
-	
-	/*@func("inverse hyperbolic sine")
-	public Number asinh(Real r) {
-		return Real.valueOf(Math.asinh(r.value));
-	}*/
 	
 	@func
 	public Number asinh(Complex c) {
@@ -1123,7 +1151,8 @@ public @UtilityClass class Functions {
 	
 	@func("cosecant")
 	public Number csc(Real r) {
-		return Real.valueOf(1.0 / Math.sin(r.value));
+		r = toRadians(r);
+		return Real.valueOf(1.0 / Math.sin(r.doubleValue()));
 	}
 	
 	@func
@@ -1165,7 +1194,8 @@ public @UtilityClass class Functions {
 	
 	@func("inverse cosecant")
 	public Number acsc(Real r) {
-		return Real.valueOf(Math.asin(1.0 / r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.asin(1.0 / r.doubleValue()), SI.RADIAN);
 	}
 	
 	@func
@@ -1173,7 +1203,7 @@ public @UtilityClass class Functions {
 		Number n = divide(Real.ONE, c);
 		if (n instanceof Complex)
 			return Complex.asin((Complex) n);
-		return Real.valueOf(Math.asin(((Real) n).value));
+		return acsc((Real) n);
 	}
 	
 	Number acsc(Number n) {
@@ -1210,7 +1240,8 @@ public @UtilityClass class Functions {
 	
 	@func("hyperbolic cosecant")
 	public Number csch(Real r) {
-		return Real.valueOf(1.0 / Math.sinh(r.value));
+		r = toRadians(r);
+		return Real.valueOf(1.0 / Math.sinh(r.doubleValue()));
 	}
 	
 	@func
@@ -1292,7 +1323,8 @@ public @UtilityClass class Functions {
 	
 	@func("cosine")
 	public Number cos(Real r) {
-		return Real.valueOf(Math.cos(r.value));
+		r = toRadians(r);
+		return Real.valueOf(Math.cos(r.doubleValue()));
 	}
 	
 	@func
@@ -1334,7 +1366,8 @@ public @UtilityClass class Functions {
 	
 	@func("inverse cosine")
 	public Number acos(Real r) {
-		return Real.valueOf(Math.acos(r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.acos(r.doubleValue()), SI.RADIAN);
 	}
 	
 	@func
@@ -1376,7 +1409,8 @@ public @UtilityClass class Functions {
 	
 	@func("hyperbolic cosine")
 	public Number cosh(Real r) {
-		return Real.valueOf(Math.cosh(r.value));
+		r = toRadians(r);
+		return Real.valueOf(Math.cosh(r.doubleValue()));
 	}
 	
 	@func
@@ -1460,7 +1494,8 @@ public @UtilityClass class Functions {
 	
 	@func("secant")
 	public Number sec(Real r) {
-		return Real.valueOf(1.0 / Math.cos(r.value));
+		r = toRadians(r);
+		return Real.valueOf(1.0 / Math.cos(r.doubleValue()));
 	}
 	
 	@func
@@ -1502,7 +1537,8 @@ public @UtilityClass class Functions {
 	
 	@func("inverse secant")
 	public Number asec(Real r) {
-		return Real.valueOf(Math.acos(1.0 / r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.acos(1.0 / r.doubleValue()), SI.RADIAN);
 	}
 	
 	@func
@@ -1510,7 +1546,7 @@ public @UtilityClass class Functions {
 		Number n = divide(Real.ONE, c);
 		if (n instanceof Complex)
 			return Complex.acos((Complex) n);
-		return Real.valueOf(Math.acos(((Real) n).value));
+		return acos((Real) n);
 	}
 	
 	Number asec(Number n) {
@@ -1547,7 +1583,8 @@ public @UtilityClass class Functions {
 	
 	@func("hyperbolic secant")
 	public Number sech(Real r) {
-		return Real.valueOf(1.0 / Math.cosh(r.value));
+		r = toRadians(r);
+		return Real.valueOf(1.0 / Math.cosh(r.doubleValue()));
 	}
 	
 	@func
@@ -1629,7 +1666,8 @@ public @UtilityClass class Functions {
 	
 	@func("tangent")
 	public Number tan(Real r) {
-		return Real.valueOf(Math.tan(r.value));
+		r = toRadians(r);
+		return Real.valueOf(Math.tan(r.doubleValue()));
 	}
 	
 	@func
@@ -1671,7 +1709,8 @@ public @UtilityClass class Functions {
 	
 	@func("inverse tangent")
 	public Number atan(Real r) {
-		return Real.valueOf(Math.atan(r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.atan(r.doubleValue()), SI.RADIAN);
 	}
 	
 	@func
@@ -1713,7 +1752,8 @@ public @UtilityClass class Functions {
 	
 	@func("hyperbolic tangent")
 	public Number tanh(Real r) {
-		return Real.valueOf(Math.tanh(r.value));
+		r = toRadians(r);
+		return Real.valueOf(Math.tanh(r.doubleValue()));
 	}
 	
 	@func
@@ -1797,7 +1837,8 @@ public @UtilityClass class Functions {
 	
 	@func("cotangent")
 	public Number cot(Real r) {
-		return Real.valueOf(1.0 / Math.tan(r.value));
+		r = toRadians(r);
+		return Real.valueOf(1.0 / Math.tan(r.doubleValue()));
 	}
 	
 	@func
@@ -1839,7 +1880,8 @@ public @UtilityClass class Functions {
 	
 	@func("inverse cotangent")
 	public Number acot(Real r) {
-		return Real.valueOf(Math.atan(1.0 / r.value));
+		check(r.getUnit() == Unit.ONE, ConversionException.class);
+		return Real.valueOf(Math.atan(1.0 / r.doubleValue()), SI.RADIAN);
 	}
 	
 	@func
@@ -1847,7 +1889,7 @@ public @UtilityClass class Functions {
 		Number n = divide(Real.ONE, c);
 		if (n instanceof Complex)
 			return Complex.atan((Complex) n);
-		return Real.valueOf(Math.atan(((Real) n).value));
+		return acot((Real) n);
 	}
 	
 	Number acot(Number n) {
@@ -1884,7 +1926,8 @@ public @UtilityClass class Functions {
 	
 	@func("hyperbolic cotangent")
 	public Number coth(Real r) {
-		return Real.valueOf(1.0 / Math.tanh(r.value));
+		r = toRadians(r);
+		return Real.valueOf(1.0 / Math.tanh(r.doubleValue()));
 	}
 	
 	@func
@@ -1968,26 +2011,26 @@ public @UtilityClass class Functions {
 	
 	@SuppressWarnings("unused")
 	private void check(boolean condition,
-			Supplier<? extends CalculatorError> errorSupplier) {
+			Supplier<? extends RuntimeException> errorSupplier) {
 		if (!condition)
 			throw errorSupplier.get();
 	}
 	
 	@SneakyThrows
 	public void check(boolean condition,
-			Class<? extends CalculatorError> errorType) {
+			Class<? extends RuntimeException> errorType) {
 		if (!condition)
 			throw errorType.newInstance();
 	}
 	
 	@SneakyThrows
-	public void check(boolean condition, Class<? extends CalculatorError> errorType,
+	public void check(boolean condition, Class<? extends RuntimeException> errorType,
 			Object... args) {
 		if (!condition) {
 			Class<?>[] parameterTypes = new Class<?>[args.length];
 			for (int i = 0; i < args.length; i++)
 				parameterTypes[i] = args[i].getClass();
-			Constructor<? extends CalculatorError> constructor =
+			Constructor<? extends RuntimeException> constructor =
 					errorType.getConstructor(parameterTypes);
 			throw constructor.newInstance(args);
 		}
@@ -2006,11 +2049,11 @@ public @UtilityClass class Functions {
 	}
 	
 	public int castInt(Number n) {
-		return (int) ((Real) n).value;
+		return ((Real) n).intValue();
 	}
 	
 	public double castDouble(Number n) {
-		return ((Real) n).value;
+		return ((Real) n).doubleValue();
 	}
 	
 	public boolean areInts(Number n1, Number n2) {
@@ -2042,7 +2085,7 @@ public @UtilityClass class Functions {
 	}
 	
 	public boolean toBoolean(Real r) {
-		return r.value != 0.0;
+		return r.doubleValue() != 0.0;
 	}
 	
 	public boolean toBoolean(Complex c) {

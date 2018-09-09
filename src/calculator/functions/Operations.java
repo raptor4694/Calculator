@@ -74,7 +74,7 @@ public @UtilityClass class Operations {
 		Arrays.sort(set, (a1, a2) -> {
 			check(a1 instanceof Real, TypeError.class);
 			check(a2 instanceof Real, TypeError.class);
-			return Double.compare(((Real) a1).value, ((Real) a2).value);
+			return ((Real) a1).compareTo((Real) a2);
 		});
 		return set;
 	}
@@ -84,7 +84,7 @@ public @UtilityClass class Operations {
 		Arrays.parallelSort(set, (a1, a2) -> {
 			check(a1 instanceof Real, TypeError.class);
 			check(a2 instanceof Real, TypeError.class);
-			return Double.compare(((Real) a1).value, ((Real) a2).value);
+			return ((Real) a1).compareTo((Real) a2);
 		});
 		return set;
 	}
