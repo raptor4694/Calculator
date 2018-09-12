@@ -17,7 +17,7 @@ public class ExpressionTry implements Expression {
 		try {
 			return body.eval(
 					body instanceof ExpressionMulti? new Scope(scope) : scope);
-		} catch (CalculatorError | IndexOutOfBoundsException e) {
+		} catch (RuntimeException e) {
 			Console.lastError = e;
 			return elsepart.eval(
 					elsepart instanceof ExpressionMulti? new Scope(scope) : scope);

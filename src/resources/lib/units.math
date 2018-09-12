@@ -2,6 +2,7 @@
 __UNITS___ = 1;
 
 mu = "µ";
+omega = "Ω";
 
 local SIprefixes = { "Y", "Z", "E", "P", "T", "G",
 	"M", "k", "h", "da", "d", "c", "m", mu, "n", 
@@ -29,7 +30,7 @@ local SI = {
 	"C",
 	"V",
 	"F",
-	"Ω",
+	omega,
 	"S",
 	"Wb",
 	"T",
@@ -113,6 +114,7 @@ local tryGlobal(name, value) {
 };
 
 for(index, unitName : SI) {
+	try{
 	tryGlobal(unitName=="cd" ? "cD" : unitName, local unit = parseUnit(unitName)); 
 	tryGlobal(SInames[index], unit);
 	if canPluralize[index] then {
@@ -141,7 +143,17 @@ for(index, unitName : SI) {
 				tryGlobal(SIprefixNames[I] + SInames[index].toLowerCase() + "s", unit);
 				tryGlobal(SIprefixNames[I] + SInames[index] + "s", unit); 
 			};	
-		}else{};
+		}else{
+			
+		};
+	};
+	}else{
+		if unitName == omega then {
+			tryGlobal(SInames[index], parseUnit("OHM")); 
+			
+		} else {
+			println "Failed to load " + SInames[index];
+		};
 	};
 };
 
@@ -171,7 +183,6 @@ local NonSI = {
 	"in",
 	"mi",
 	"nmi",
-	"Å",
 	"ly",
 	"pt",
 	"lb",
@@ -189,7 +200,6 @@ local NonSInames = {
 	"inch",
 	"mile",
 	"nautical_mile",
-	"Angstrom",
 	"light_year",
 	"point",
 	"pound",
@@ -205,7 +215,6 @@ local canPluralize = {
 	3,
 	1,
 	2,
-	1,
 	1,
 	1,
 	1,
@@ -236,8 +245,8 @@ ounce = parseUnit("oz");
 au = parseUnit("ua");
 parsec = pc = parsecs = parseUnit("pc");
 px = pixel = pixels = parseUnit("pixel");
-Fahrenheit = parseUnit("°F");
-degrees = degree = parseUnit("°");
+try Fahrenheit = parseUnit("°F") else Fahrenheit = parseUnit("FAHRENHEIT");
+try degrees = degree = parseUnit("°") else degrees = degree = parseUnit("DEGREE_ANGLE");
 mph = parseUnit("mph");
 
 return;

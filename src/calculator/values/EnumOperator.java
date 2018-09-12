@@ -187,6 +187,12 @@ public enum EnumOperator implements Function {
 									try {
 										result[r][c] = evalValue(method.invoke(null,
 												matrix[r][c], matrix2[r][c]));
+									} catch (IllegalArgumentException e) {
+										if (e.getMessage().equals(
+												"argument type mismatch")) {
+											throw new TypeError(e);
+										}
+										throw e;
 									} catch (ArrayStoreException e) {
 										throw new TypeError(e);
 									}
@@ -207,6 +213,12 @@ public enum EnumOperator implements Function {
 									try {
 										result[r][c] = evalValue(method.invoke(null,
 												matrix[r][c], array[c]));
+									} catch (IllegalArgumentException e) {
+										if (e.getMessage().equals(
+												"argument type mismatch")) {
+											throw new TypeError(e);
+										}
+										throw e;
 									} catch (ArrayStoreException e) {
 										throw new TypeError(e);
 									}
@@ -225,6 +237,12 @@ public enum EnumOperator implements Function {
 									try {
 										result[r][c] = evalValue(method.invoke(null,
 												matrix[r][c], value));
+									} catch (IllegalArgumentException e) {
+										if (e.getMessage().equals(
+												"argument type mismatch")) {
+											throw new TypeError(e);
+										}
+										throw e;
 									} catch (ArrayStoreException e) {
 										throw new TypeError(e);
 									}
@@ -250,6 +268,12 @@ public enum EnumOperator implements Function {
 									try {
 										result[r][c] = evalValue(method.invoke(null,
 												array[c], matrix[r][c]));
+									} catch (IllegalArgumentException e) {
+										if (e.getMessage().equals(
+												"argument type mismatch")) {
+											throw new TypeError(e);
+										}
+										throw e;
 									} catch (ArrayStoreException e) {
 										throw new TypeError(e);
 									}
@@ -269,6 +293,12 @@ public enum EnumOperator implements Function {
 								try {
 									result[i] = evalValue(method.invoke(null,
 											array[i], array2[i]));
+								} catch (IllegalArgumentException e) {
+									if (e.getMessage().equals(
+											"argument type mismatch")) {
+										throw new TypeError(e);
+									}
+									throw e;
 								} catch (ArrayStoreException e) {
 									throw new TypeError(e);
 								}
@@ -284,6 +314,12 @@ public enum EnumOperator implements Function {
 								try {
 									result[i] = evalValue(
 											method.invoke(null, array[i], value));
+								} catch (IllegalArgumentException e) {
+									if (e.getMessage().equals(
+											"argument type mismatch")) {
+										throw new TypeError(e);
+									}
+									throw e;
 								} catch (ArrayStoreException e) {
 									throw new TypeError(e);
 								}
@@ -328,6 +364,12 @@ public enum EnumOperator implements Function {
 									try {
 										result[r][c] = evalValue(method.invoke(null,
 												value, matrix[r][c]));
+									} catch (IllegalArgumentException e) {
+										if (e.getMessage().equals(
+												"argument type mismatch")) {
+											throw new TypeError(e);
+										}
+										throw e;
 									} catch (ArrayStoreException e) {
 										throw new TypeError(e);
 									}

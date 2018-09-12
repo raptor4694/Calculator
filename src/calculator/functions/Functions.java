@@ -12,6 +12,7 @@ import java.util.Random;
 import java.util.function.Supplier;
 
 import javax.measure.converter.ConversionException;
+import javax.measure.unit.NonSI;
 import javax.measure.unit.SI;
 import javax.measure.unit.Unit;
 
@@ -834,6 +835,16 @@ public @UtilityClass class Functions {
 		try {
 			return Unit.valueOf(str);
 		} catch (IllegalArgumentException e) {
+			try {
+				return (Unit) SI.class.getField(str).get(null);
+			} catch (ClassCastException | NoSuchFieldException
+					| IllegalArgumentException | IllegalAccessException
+					| SecurityException e2) {}
+			try {
+				return (Unit) NonSI.class.getField(str).get(null);
+			} catch (ClassCastException | NoSuchFieldException
+					| IllegalArgumentException | IllegalAccessException
+					| SecurityException e2) {}
 			throw new CalculatorError(e);
 		}
 	}
