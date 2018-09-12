@@ -3,8 +3,8 @@ package calculator.expressions;
 import java.util.ArrayList;
 
 import calculator.Scope;
-import calculator.VarNotFoundError;
 import calculator.Visitor;
+import calculator.errors.VarNotFoundError;
 import calculator.values.EnumOperator;
 import calculator.values.Function;
 import lombok.AllArgsConstructor;

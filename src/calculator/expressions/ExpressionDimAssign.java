@@ -7,10 +7,10 @@ import java.util.Arrays;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
-import calculator.DimensionError;
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.Visitor;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import calculator.values.Number;
 import calculator.values.Real;
 import lombok.AllArgsConstructor;
@@ -50,20 +50,20 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				
 				final Object obj = value.eval(scope);
 				
-				check(obj instanceof Number[], TypeError.class);
+				check(obj instanceof Number[], TypeError);
 				
 				Number[] sizeArr = (Number[]) obj;
-				check(sizeArr.length == 2, DimensionError.class);
-				check(sizeArr[0] instanceof Real, TypeError.class);
-				check(sizeArr[1] instanceof Real, TypeError.class);
-				check(isInt(sizeArr[0]), TypeError.class);
-				check(isInt(sizeArr[1]), TypeError.class);
+				check(sizeArr.length == 2, DimensionError);
+				check(sizeArr[0] instanceof Real, TypeError);
+				check(sizeArr[1] instanceof Real, TypeError);
+				check(isInt(sizeArr[0]), TypeError);
+				check(isInt(sizeArr[1]), TypeError);
 				
 				int rows = ((Real) sizeArr[0]).intValue();
 				int columns = ((Real) sizeArr[1]).intValue();
 				
-				check(rows > 0, DimensionError.class);
-				check(columns > 0, DimensionError.class);
+				check(rows > 0, DimensionError);
+				check(columns > 0, DimensionError);
 				
 				int columnCount = columnCount(matrix);
 				
@@ -129,12 +129,12 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				
 				final Object obj = value.eval(scope);
 				
-				check(obj instanceof Real, TypeError.class);
-				check(isInt((Real) obj), TypeError.class);
+				check(obj instanceof Real, TypeError);
+				check(isInt((Real) obj), TypeError);
 				
 				int i = ((Real) obj).intValue();
 				
-				check(i >= 0, DimensionError.class);
+				check(i >= 0, DimensionError);
 				
 				Object[] result = (Object[]) Array.newInstance(
 						array.getClass().getComponentType(), i);
@@ -158,11 +158,11 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				final Object obj = value.eval(scope);
 				
 				if (obj instanceof Real) {
-					check(isInt((Real) obj), TypeError.class);
+					check(isInt((Real) obj), TypeError);
 					
 					int i = ((Real) obj).intValue();
 					
-					check(i >= 0, DimensionError.class);
+					check(i >= 0, DimensionError);
 					
 					if (arrayObj instanceof Number) {
 						Number[] result = new Number[i];
@@ -184,17 +184,17 @@ public class ExpressionDimAssign implements ExpressionNamed {
 						throw new TypeError();
 				} else if (obj instanceof Number[]) {
 					Number[] sizeArr = (Number[]) obj;
-					check(sizeArr.length == 2, DimensionError.class);
-					check(sizeArr[0] instanceof Real, TypeError.class);
-					check(sizeArr[1] instanceof Real, TypeError.class);
-					check(isInt(sizeArr[0]), TypeError.class);
-					check(isInt(sizeArr[1]), TypeError.class);
+					check(sizeArr.length == 2, DimensionError);
+					check(sizeArr[0] instanceof Real, TypeError);
+					check(sizeArr[1] instanceof Real, TypeError);
+					check(isInt(sizeArr[0]), TypeError);
+					check(isInt(sizeArr[1]), TypeError);
 					
 					int rows = ((Real) sizeArr[0]).intValue();
 					int columns = ((Real) sizeArr[1]).intValue();
 					
-					check(rows > 0, DimensionError.class);
-					check(columns > 0, DimensionError.class);
+					check(rows > 0, DimensionError);
+					check(columns > 0, DimensionError);
 					
 					if (arrayObj instanceof Number) {
 						Number[][] result = new Number[rows][columns];
@@ -224,9 +224,9 @@ public class ExpressionDimAssign implements ExpressionNamed {
 		} else {
 			Object obj = value.eval(scope);
 			if (obj instanceof Real) {
-				check(isInt((Real) obj), TypeError.class);
+				check(isInt((Real) obj), TypeError);
 				int size = ((Real) obj).intValue();
-				check(size >= 0, DimensionError.class);
+				check(size >= 0, DimensionError);
 				
 				Number[] n = new Number[size];
 				
@@ -237,17 +237,17 @@ public class ExpressionDimAssign implements ExpressionNamed {
 				return obj;
 			} else if (obj instanceof Number[]) {
 				Number[] sizeArr = (Number[]) obj;
-				check(sizeArr.length == 2, DimensionError.class);
-				check(sizeArr[0] instanceof Real, TypeError.class);
-				check(sizeArr[1] instanceof Real, TypeError.class);
-				check(isInt(sizeArr[0]), TypeError.class);
-				check(isInt(sizeArr[1]), TypeError.class);
+				check(sizeArr.length == 2, DimensionError);
+				check(sizeArr[0] instanceof Real, TypeError);
+				check(sizeArr[1] instanceof Real, TypeError);
+				check(isInt(sizeArr[0]), TypeError);
+				check(isInt(sizeArr[1]), TypeError);
 				
 				int rows = ((Real) sizeArr[0]).intValue();
 				int columns = ((Real) sizeArr[1]).intValue();
 				
-				check(rows > 0, DimensionError.class);
-				check(columns > 0, DimensionError.class);
+				check(rows > 0, DimensionError);
+				check(columns > 0, DimensionError);
 				
 				Number[][] m = new Number[rows][columns];
 				

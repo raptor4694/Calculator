@@ -1,4 +1,4 @@
-package calculator;
+package calculator.errors;
 
 public class VarNotFoundError extends CalculatorError {
 	/**

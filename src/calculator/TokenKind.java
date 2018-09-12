@@ -22,6 +22,7 @@ public enum TokenKind {
 	MODULO ("%", null, EnumOperator.PERCENT),
 	HASHTAG ("#", null, EnumOperator.CARDINALITY),
 	BANG ("!", null, EnumOperator.NOT),
+	DEGREE ("°"),
 	// vectors element access
 	DOTX (".x"),
 	DOTY (".y"),
@@ -112,8 +113,10 @@ public enum TokenKind {
 	DIM ("dim", Functions.class),
 	COMPILE ("compile", Console.class),
 	DECOMPILE ("decompile", Console.class),
+	BYTECODE ("bytecode", Console.class),
 	DOLLAR ("$"),
 	ARROW ("=>"),
+	SLIMARROW ("->", EnumOperator.CONVERT),
 	
 	// trigonometric functions
 	SIN ("sin", Functions.class),

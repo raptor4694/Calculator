@@ -3,8 +3,8 @@ package calculator.expressions;
 import static calculator.functions.Functions.*;
 
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.Visitor;
+import calculator.errors.TypeError;
 import calculator.values.EnumOperator;
 import lombok.NonNull;
 import lombok.experimental.ExtensionMethod;

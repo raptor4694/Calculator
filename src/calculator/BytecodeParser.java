@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import calculator.errors.BytecodeException;
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionArrayLiteral;
 import calculator.expressions.ExpressionBinaryOperator;
@@ -55,8 +56,9 @@ public class BytecodeParser {
 	}
 	
 	private ByteBuffer buf;
+	private String[] variables;
 	
-	public BytecodeParser(byte[] bytes) {
+	private BytecodeParser(byte[] bytes) {
 		buf = ByteBuffer.wrap(bytes);
 	}
 	
@@ -71,6 +73,10 @@ public class BytecodeParser {
 	}*/
 	
 	public Expression parse() throws BytecodeException {
+		variables = new String[buf.getInt()];
+		for (int i = 0; i < variables.length; i++) {
+			variables[i] = string();
+		}
 		Expression result = expr();
 		/*if (buf.remaining() > 0)
 			throw new BytecodeException(
@@ -117,11 +123,12 @@ public class BytecodeParser {
 			buf.get();
 			return new ExpressionWhile(expr(), expr());
 		case FOR:
-			return new ExpressionFor(string(), expr(), expr(), expr(), expr());
+			return new ExpressionFor(variable(), expr(), expr(), expr(), expr());
 		case FOREACH:
-			return new ExpressionForEachSingle(string(), expr(), expr());
+			return new ExpressionForEachSingle(variable(), expr(), expr());
 		case FOREACH2:
-			return new ExpressionForEachDouble(string(), string(), expr(), expr());
+			return new ExpressionForEachDouble(variable(), variable(), expr(),
+					expr());
 		case CALL: {
 			Expression func = expr();
 			List<Expression> args = newList();
@@ -133,17 +140,18 @@ public class BytecodeParser {
 			return new ExpressionFunctionCall(func, toArray(args));
 		}
 		case FUNCDEF: {
-			String name = string();
-			if (name.length() == 0)
+			String name;
+			int i = buf.getInt();
+			if (i == 0)
 				name = null;
-			List<String> args = newList();
-			String arg = string();
-			while (arg.length() != 0) {
-				args.add(arg);
-				arg = string();
+			else
+				name = variables[i - 1];
+			String[] args = new String[buf.getInt()];
+			for (i = 0; i < args.length; i++) {
+				args[i] = variable();
 			}
 			return new ExpressionFunctionDefinition(
-					new UserFunction(name, args.toArray(new String[0]), expr()));
+					new UserFunction(name, args, expr()));
 		}
 		case METHOD: {
 			Class<?> clazz = Class.forName(string());
@@ -153,9 +161,9 @@ public class BytecodeParser {
 		case OPERATOR:
 			return new ExpressionLiteral(operator());
 		case SETDIM:
-			return new ExpressionDimAssign(string(), expr());
+			return new ExpressionDimAssign(variable(), expr());
 		case DELETE:
-			return new ExpressionDeleteVariable(string());
+			return new ExpressionDeleteVariable(variable());
 		case DELALL:
 			return bool()? new ExpressionDeleteAll() : new ExpressionDeleteLocal();
 		case DOLLAR:
@@ -182,7 +190,7 @@ public class BytecodeParser {
 			List<ExpressionLocal.Def> defs = newList();
 			byte b;
 			do {
-				String name = string();
+				String name = variable();
 				switch (b = buf.get()) {
 				case END:
 					defs.add(new ExpressionLocal.DefImpl(name));
@@ -190,18 +198,16 @@ public class BytecodeParser {
 				case SETDIM:
 					defs.add(new ExpressionLocal.DimDef(name, expr()));
 					break;
-				case OPCODES_COUNT:
+				case ASSIGN:
 					defs.add(new ExpressionLocal.DefImpl(name, expr()));
 					break;
 				case FUNCDEF: {
-					List<String> args = newList();
-					String arg = string();
-					while (arg.length() != 0) {
-						args.add(arg);
-						arg = string();
+					String[] args = new String[buf.getInt()];
+					for (int i = 0; i < args.length; i++) {
+						args[i] = variable();
 					}
-					defs.add(new ExpressionLocal.FuncDef(new UserFunction(name,
-							args.toArray(new String[0]), expr())));
+					defs.add(new ExpressionLocal.FuncDef(
+							new UserFunction(name, args, expr())));
 					break;
 				}
 				default:
@@ -241,7 +247,7 @@ public class BytecodeParser {
 		case TRY:
 			return new ExpressionTry(expr(), expr());
 		case VARIABLE:
-			return new ExpressionVariable(string());
+			return new ExpressionVariable(variable());
 		case ASSIGN:
 			return ((ExpressionReferenceable) expr()).toAssign(expr());
 		case ASSIGNOP: {
@@ -299,6 +305,10 @@ public class BytecodeParser {
 		default:
 			throw new BytecodeException(buf.position() - 1);
 		}
+	}
+	
+	private String variable() {
+		return variables[buf.getInt() - 1];
 	}
 	
 	private String string() throws BytecodeException {

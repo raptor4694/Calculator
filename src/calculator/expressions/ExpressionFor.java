@@ -1,8 +1,9 @@
 package calculator.expressions;
 
 import calculator.Scope;
-import calculator.TypeError;
+import calculator.Scope.FileScope;
 import calculator.Visitor;
+import calculator.errors.TypeError;
 import calculator.values.Real;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.ExtensionMethod;
@@ -58,7 +59,7 @@ public class ExpressionFor implements Expression {
 	private Object evalBody(Scope scope, double start, double end, double increment,
 			java.util.function.Function<Scope, Object> evalValueFunction) {
 		
-		Scope parent = scope;
+		Scope parent = new FileScope(scope);
 		
 		Object last = null;
 		
@@ -82,8 +83,7 @@ public class ExpressionFor implements Expression {
 	private Object evalAll(Scope scope,
 			java.util.function.Function<Scope, Object> evalValueFunction) {
 		evalHeader(scope);
-		return evalBody(new Scope(scope), lastStart, lastEnd, lastIncrement,
-				evalValueFunction);
+		return evalBody(scope, lastStart, lastEnd, lastIncrement, evalValueFunction);
 	}
 	
 	@Override

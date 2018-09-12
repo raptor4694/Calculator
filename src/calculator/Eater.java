@@ -1,7 +1,5 @@
 package calculator;
 
-import static java.lang.Character.UnicodeBlock.*;
-
 import lombok.Getter;
 
 public final class Eater {
@@ -123,8 +121,54 @@ public final class Eater {
 	}
 	
 	public static boolean isWordChar(int c) {
-		return Character.isLetterOrDigit(c) || c == '_'
-				|| Character.UnicodeBlock.of(c) == COMBINING_DIACRITICAL_MARKS;
+		if (Character.isWhitespace(c))
+			return false;
+		if (c == '_')
+			return true;
+		if (c <= '@')
+			return false;
+		if (c >= '[' && c <= '`')
+			return false;
+		if (c >= '{' && c <= '¡')
+			return false;
+		if (c == '¦')
+			return false;
+		if (c >= '¨' & c <= '´')
+			return false;
+		if (c >= '·' && c <= '¿')
+			return false;
+		if (c >= '˂' && c <= '˅')
+			return false;
+		if (c >= '\u0378' && c <= 'ͺ')
+			return false;
+		if (c >= '\u0380' && c <= '΅')
+			return false;
+		if (c >= '҂' && c <= '҉')
+			return false;
+		if (c >= '\u0557' && c <= '\u0560')
+			return false;
+		if (c >= '\u0588' && c <= '\u058C')
+			return false;
+		switch (c) {
+		case '÷':
+		case 'ǀ':
+		case 'ǁ':
+		case 'ǂ':
+		case 'ǃ':
+		case 'ʹ':
+		case '͵':
+		case ';':
+		case '·':
+		case '\u038B':
+		case '\u038D':
+		case '\u03A2':
+		case '\u0530':
+			return false;
+		default:
+			return true;
+		}
+		// return Character.isLetterOrDigit(c) || c == '_'
+		// || Character.UnicodeBlock.of(c) == COMBINING_DIACRITICAL_MARKS;
 	}
 	
 	@Override

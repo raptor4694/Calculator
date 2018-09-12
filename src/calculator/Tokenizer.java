@@ -2,6 +2,8 @@ package calculator;
 
 import java.util.ArrayList;
 
+import calculator.errors.SyntaxError;
+
 public class Tokenizer {
 	Eater eater;
 	

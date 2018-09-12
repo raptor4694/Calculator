@@ -3,7 +3,10 @@ package calculator;
 import static calculator.Bytecode.*;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
+import calculator.errors.BytecodeException;
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionAbs;
 import calculator.expressions.ExpressionArrayLiteral;
@@ -92,16 +95,26 @@ public class BytecodeCompiler implements Visitor {
 	}
 	
 	private ByteBuffer buf;
+	private List<String> variables = new ArrayList<>();
+	private static final int ALLOCATION_SIZE = 100000000;
 	
 	private BytecodeCompiler(Expression expr) {
-		buf = ByteBuffer.allocate(100000);
+		buf = ByteBuffer.allocate(ALLOCATION_SIZE);
 		visitExpression(expr);
 	}
 	
 	private byte[] getBytes() {
 		byte[] b = buf.array();
-		byte[] result = new byte[buf.position()];
-		System.arraycopy(b, 0, result, 0, result.length);
+		int size1 = buf.position();
+		buf = ByteBuffer.allocate(ALLOCATION_SIZE);
+		putInt(variables.size());
+		for (String s : variables)
+			putString(s);
+		byte[] b2 = buf.array();
+		int size2 = buf.position();
+		byte[] result = new byte[size1 + size2];
+		System.arraycopy(b2, 0, result, 0, size2);
+		System.arraycopy(b, 0, result, size2, size1);
 		return result;
 	}
 	
@@ -116,6 +129,16 @@ public class BytecodeCompiler implements Visitor {
 	
 	private void put(byte b) {
 		buf.put(b);
+	}
+	
+	private void putVariable(String s) {
+		int i = variables.indexOf(s);
+		if (i == -1) {
+			variables.add(s);
+			buf.putInt(variables.size());
+		} else {
+			buf.putInt(i + 1);
+		}
 	}
 	
 	/*private void put(byte[] bytes) {
@@ -229,13 +252,13 @@ public class BytecodeCompiler implements Visitor {
 	@Override
 	public void visitDelete(ExpressionDeleteVariable expr) {
 		put(DELETE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 	}
 	
 	@Override
 	public void visitDimAssign(ExpressionDimAssign expr) {
 		put(SETDIM);
-		putString(expr.variable);
+		putVariable(expr.variable);
 		visitExpression(expr.value);
 	}
 	
@@ -247,7 +270,7 @@ public class BytecodeCompiler implements Visitor {
 	@Override
 	public void visitFor(ExpressionFor expr) {
 		put(FOR);
-		putString(expr.variable);
+		putVariable(expr.variable);
 		visitExpression(expr.start);
 		visitExpression(expr.end);
 		visitExpression(expr.increment);
@@ -257,7 +280,7 @@ public class BytecodeCompiler implements Visitor {
 	@Override
 	public void visitFor(ExpressionForEachSingle expr) {
 		put(FOREACH);
-		putString(expr.variable);
+		putVariable(expr.variable);
 		visitExpression(expr.array);
 		visitExpression(expr.body);
 	}
@@ -265,8 +288,8 @@ public class BytecodeCompiler implements Visitor {
 	@Override
 	public void visitFor(ExpressionForEachDouble expr) {
 		put(FOREACH2);
-		putString(expr.variable1);
-		putString(expr.variable2);
+		putVariable(expr.variable1);
+		putVariable(expr.variable2);
 		visitExpression(expr.array);
 		visitExpression(expr.body);
 	}
@@ -284,13 +307,13 @@ public class BytecodeCompiler implements Visitor {
 		put(FUNCDEF);
 		UserFunction func = expr.function;
 		if (func.getName() == null)
-			put(END);
+			putInt(END);
 		else
-			putString(func.getName());
+			putVariable(func.getName());
+		putInt(func.varnames.length);
 		for (String arg : func.varnames) {
-			putString(arg);
+			putVariable(arg);
 		}
-		put(END);
 		visitExpression(func.body);
 	}
 	
@@ -398,42 +421,43 @@ public class BytecodeCompiler implements Visitor {
 	@Override
 	public void visitVariable(ExpressionVariable expr) {
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 	}
 	
 	@Override
 	public void visitWhile(ExpressionWhile expr) {
 		put(WHILE);
+		put(END); // placeholder
 		visitExpression(expr.condition);
 		visitExpression(expr.body);
 	}
 	
 	@Override
 	public void visitDef(DefImpl expr) {
-		putString(expr.name);
+		putVariable(expr.name);
 		if (expr.value == null)
 			put(END);
 		else {
-			put(OPCODES_COUNT);
+			put(ASSIGN);
 			visitExpression(expr.value);
 		}
 	}
 	
 	@Override
 	public void visitDef(DimDef expr) {
-		putString(expr.variable);
+		putVariable(expr.variable);
 		put(SETDIM);
 		visitExpression(expr.value);
 	}
 	
 	@Override
 	public void visitDef(FuncDef expr) {
-		putString(expr.function.getName());
+		putVariable(expr.function.getName());
 		put(FUNCDEF);
+		putInt(expr.function.varnames.length);
 		for (String arg : expr.function.varnames) {
-			putString(arg);
+			putVariable(arg);
 		}
-		put(END);
 		visitExpression(expr.function.body);
 	}
 	
@@ -459,7 +483,7 @@ public class BytecodeCompiler implements Visitor {
 	public void visitAssign(ExpressionAssign expr) {
 		put(ASSIGN);
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 		visitExpression(expr.expr);
 	}
 	
@@ -511,7 +535,7 @@ public class BytecodeCompiler implements Visitor {
 		put(ASSIGNOP);
 		putOperator(expr.operator);
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 		visitExpression(expr.expr);
 	}
 	
@@ -567,7 +591,7 @@ public class BytecodeCompiler implements Visitor {
 	public void visitPrefixIncrement(ExpressionVarPrefixIncrement expr) {
 		put(PREFIX_INC);
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 	}
 	
 	@Override
@@ -612,7 +636,7 @@ public class BytecodeCompiler implements Visitor {
 	public void visitPrefixDecrement(ExpressionVarPrefixDecrement expr) {
 		put(PREFIX_DEC);
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 	}
 	
 	@Override
@@ -657,7 +681,7 @@ public class BytecodeCompiler implements Visitor {
 	public void visitPostfixIncrement(ExpressionVarPostfixIncrement expr) {
 		put(POSTFIX_INC);
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 	}
 	
 	@Override
@@ -702,7 +726,7 @@ public class BytecodeCompiler implements Visitor {
 	public void visitPostfixDecrement(ExpressionVarPostfixDecrement expr) {
 		put(POSTFIX_DEC);
 		put(VARIABLE);
-		putString(expr.variable);
+		putVariable(expr.variable);
 	}
 	
 	@Override

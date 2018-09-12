@@ -3,6 +3,7 @@ package calculator.expressions;
 import static calculator.functions.Functions.*;
 
 import calculator.Scope;
+import calculator.Scope.FileScope;
 import calculator.Visitor;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.ExtensionMethod;
@@ -26,7 +27,7 @@ public class ExpressionWhile implements Expression {
 	
 	private Object evalBody(Scope parent,
 			java.util.function.Function<Scope, Object> evalValueFunction) {
-		parent = new Scope(parent);
+		parent = new FileScope(parent);
 		Object last = null;
 		try {
 			while (toBoolean(condition.eval(parent))) {

@@ -11,11 +11,20 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.function.Supplier;
 
-import calculator.CalculatorError;
-import calculator.DimensionError;
-import calculator.TypeError;
+import javax.measure.converter.ConversionException;
+import javax.measure.unit.SI;
+import javax.measure.unit.Unit;
+
+import calculator.Printer;
 import calculator.func;
 import calculator.param;
+import calculator.errors.BytecodeException;
+import calculator.errors.CalculatorError;
+import calculator.errors.DimensionError;
+import calculator.errors.SyntaxError;
+import calculator.errors.TypeError;
+import calculator.errors.VarNotFoundError;
+import calculator.values.Amount;
 import calculator.values.Complex;
 import calculator.values.Function;
 import calculator.values.MethodFunction;
@@ -25,6 +34,18 @@ import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 
 public @UtilityClass class Functions {
+	public static final Class<CalculatorError> CalculatorError =
+			CalculatorError.class;
+	public static final Class<BytecodeException> BytecodeException =
+			BytecodeException.class;
+	public static final Class<DimensionError> DimensionError = DimensionError.class;
+	public static final Class<SyntaxError> SyntaxError = SyntaxError.class;
+	public static final Class<TypeError> TypeError = TypeError.class;
+	public static final Class<VarNotFoundError> VarNotFoundError =
+			VarNotFoundError.class;
+	public static final Class<ConversionException> ConversionException =
+			ConversionException.class;
+	
 	private Random rand = new Random();
 	
 	public final int TYPE_REAL = 0, TYPE_COMPLEX = 1, TYPE_ARRAY = 2,
@@ -79,10 +100,17 @@ public @UtilityClass class Functions {
 		String className = s.substring(0, i);
 		String funcName = s.substring(i + 1);
 		try {
-			return new MethodFunction(Class.forName(className), funcName);
+			return new MethodFunction(Class.forName(className), funcName, false);
 		} catch (ClassNotFoundException e) {
 			throw new CalculatorError(e.getMessage(), e);
 		}
+	}
+	
+	@func
+	public Number byteToUnsignedInt(Real r) {
+		check(r.doubleValue() == (byte) r.doubleValue(), TypeError);
+		byte b = (byte) r.doubleValue();
+		return Real.valueOf(Byte.toUnsignedInt(b));
 	}
 	
 	/////// SIZE ///////
@@ -130,7 +158,7 @@ public @UtilityClass class Functions {
 	
 	@func("sets the seed to use in the random number generator")
 	public void setRandomSeed(@param("int") Real seed) {
-		check(seed.value == (long) seed.value, TypeError.class);
+		check(seed.value == (long) seed.value, TypeError);
 		
 		rand.setSeed((long) seed.value);
 	}
@@ -142,15 +170,15 @@ public @UtilityClass class Functions {
 	
 	@func("random integer")
 	public int randInt(@param("bound") Real upper) {
-		check(isInt(upper), TypeError.class);
+		check(isInt(upper), TypeError);
 		
 		return rand.nextInt(castInt(upper));
 	}
 	
 	@func
 	public int randInt(@param("lower") Real lower, @param("upper") Real upper) {
-		check(isInt(lower), TypeError.class);
-		check(isInt(upper), TypeError.class);
+		check(isInt(lower), TypeError);
+		check(isInt(upper), TypeError);
 		
 		int lowerInt = castInt(lower);
 		
@@ -159,7 +187,7 @@ public @UtilityClass class Functions {
 	
 	@func("returns an array of random integers between 0 and 10")
 	public Number[] randBin(@param("size") Number size) {
-		check(isInt(size), TypeError.class);
+		check(isInt(size), TypeError);
 		Number[] result = new Number[castInt(size)];
 		for (int i = 0; i < result.length; i++) {
 			result[i] = Real.valueOf(rand.nextInt(11));
@@ -170,8 +198,8 @@ public @UtilityClass class Functions {
 	@func("returns an array of random integers")
 	public Number[] randBin(@param("size") Number size,
 			@param("bound") Number upper) {
-		check(isInt(size), TypeError.class);
-		check(isInt(upper), TypeError.class);
+		check(isInt(size), TypeError);
+		check(isInt(upper), TypeError);
 		int upperInt = castInt(upper);
 		Number[] result = new Number[castInt(size)];
 		for (int i = 0; i < result.length; i++) {
@@ -183,9 +211,9 @@ public @UtilityClass class Functions {
 	@func
 	public Number[] randBin(@param("size") Number size, @param("lower") Number lower,
 			@param("upper") Number upper) {
-		check(isInt(size), TypeError.class);
-		check(isInt(lower), TypeError.class);
-		check(isInt(upper), TypeError.class);
+		check(isInt(size), TypeError);
+		check(isInt(lower), TypeError);
+		check(isInt(upper), TypeError);
 		int lowerInt = castInt(lower);
 		int upperInt = castInt(upper) - lowerInt;
 		Number[] result = new Number[castInt(size)];
@@ -198,8 +226,8 @@ public @UtilityClass class Functions {
 	@func("returns a matrix of random integers between 0 and 10")
 	public Number[][] randM(@param("rows") Number rows,
 			@param("columns") Number columns) {
-		check(isInt(rows), TypeError.class);
-		check(isInt(columns), TypeError.class);
+		check(isInt(rows), TypeError);
+		check(isInt(columns), TypeError);
 		
 		int rowCount = castInt(rows);
 		int columnCount = castInt(columns);
@@ -216,9 +244,9 @@ public @UtilityClass class Functions {
 	@func("returns a matrix of random integers")
 	public Number[][] randM(@param("rows") Number rows,
 			@param("columns") Number columns, @param("bound") Number bound) {
-		check(isInt(rows), TypeError.class);
-		check(isInt(columns), TypeError.class);
-		check(isInt(bound), TypeError.class);
+		check(isInt(rows), TypeError);
+		check(isInt(columns), TypeError);
+		check(isInt(bound), TypeError);
 		
 		int rowCount = castInt(rows);
 		int columnCount = castInt(columns);
@@ -250,6 +278,22 @@ public @UtilityClass class Functions {
 	}
 	
 	//////// SET OPERATIONS ////////
+	
+	@func
+	public String join(Object[] objs) {
+		return join(objs, " ");
+	}
+	
+	@func
+	public String join(Object[] objs, String separator) {
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < objs.length; i++) {
+			if (i != 0)
+				b.append(separator);
+			b.append(Printer.toString(objs[i]));
+		}
+		return b.toString();
+	}
 	
 	@func("appends the value to the end of a copy of the set")
 	public Number[] append(Number[] set, Number n) {
@@ -359,7 +403,7 @@ public @UtilityClass class Functions {
 	
 	@func("the middle of a sorted set of numbers (first sorts the set)")
 	public Number median(Number[] set) {
-		check(set.length > 0, DimensionError.class);
+		check(set.length > 0, DimensionError);
 		
 		// optimization
 		if (set.length == 1)
@@ -379,7 +423,7 @@ public @UtilityClass class Functions {
 	
 	@func("the average value")
 	public Number mean(Number[] set) {
-		check(set.length > 0, DimensionError.class);
+		check(set.length > 0, DimensionError);
 		return sum(set).divide(Real.valueOf(set.length));
 	}
 	
@@ -453,8 +497,14 @@ public @UtilityClass class Functions {
 		return indexOf0(set, value, set.length) + 1;
 	}
 	
+	@func
 	public int indexOf(String[] set, String value) {
 		return indexOf0(set, value, set.length) + 1;
+	}
+	
+	@func
+	public int indexOf(String s, String substr) {
+		return s.indexOf(substr);
 	}
 	
 	<T> int indexOf0(T[] set, T value, int length) {
@@ -463,6 +513,43 @@ public @UtilityClass class Functions {
 				return i;
 		}
 		return -1;
+	}
+	
+	@func
+	public String toLowerCase(String s) {
+		return s.toLowerCase();
+	}
+	
+	@func
+	public String toUpperCase(String s) {
+		return s.toUpperCase();
+	}
+	
+	@func
+	public String trim(String s) {
+		return s.trim();
+	}
+	
+	@func
+	public Number isUpperCase(String s) {
+		if (s.isEmpty())
+			return Real.ZERO;
+		for (int i = 0; i < s.length(); i++) {
+			if (Character.isLowerCase(s.charAt(i)))
+				return Real.ZERO;
+		}
+		return Real.ONE;
+	}
+	
+	@func
+	public Number isLowerCase(String s) {
+		if (s.isEmpty())
+			return Real.ZERO;
+		for (int i = 0; i < s.length(); i++) {
+			if (Character.isUpperCase(s.charAt(i)))
+				return Real.ZERO;
+		}
+		return Real.ONE;
 	}
 	
 	//////// MATRIX OPERATIONS ////////
@@ -479,7 +566,7 @@ public @UtilityClass class Functions {
 	
 	@func("identity matrix")
 	public Number[][] identity(@param("size") Number size) {
-		check(isInt(size), TypeError.class);
+		check(isInt(size), TypeError);
 		int length = castInt(size);
 		return identity(length);
 	}
@@ -493,7 +580,7 @@ public @UtilityClass class Functions {
 	
 	@func("inverse of matrix")
 	public Number[][] invert(Number matrix[][]) {
-		check(isSquare(matrix), DimensionError.class);
+		check(isSquare(matrix), DimensionError);
 		
 		int n = matrix.length;
 		
@@ -593,7 +680,7 @@ public @UtilityClass class Functions {
 			for (int i = j; i < n; ++i) {
 				Number pi0 = abs(a[index[i]][j]);
 				pi0 = pi0.divide(c[index[i]]);
-				check(pi0 instanceof Real, TypeError.class);
+				check(pi0 instanceof Real, TypeError);
 				if (((Real) pi0).value > pi1.value) {
 					pi1 = (Real) pi0;
 					k = i;
@@ -684,7 +771,7 @@ public @UtilityClass class Functions {
 	
 	@func("determinant")
 	public Number det(Number[][] matrix) {
-		check(isSquare(matrix), DimensionError.class);
+		check(isSquare(matrix), DimensionError);
 		switch (matrix.length) {
 		case 1:
 			return matrix[0][0];
@@ -708,7 +795,7 @@ public @UtilityClass class Functions {
 	
 	@func("permanant")
 	public Number perm(Number[][] matrix) {
-		check(isSquare(matrix), DimensionError.class);
+		check(isSquare(matrix), DimensionError);
 		switch (matrix.length) {
 		case 1:
 			return matrix[0][0];
@@ -727,7 +814,7 @@ public @UtilityClass class Functions {
 	
 	@func("greatest common divisor of 2 integers")
 	public Number gcd(@param("int") Number a, @param("int") Number b) {
-		check(areInts(a, b), TypeError.class);
+		check(areInts(a, b), TypeError);
 		
 		return Real.valueOf(gcd(((Real) a).intValue(), ((Real) b).intValue()));
 	}
@@ -742,9 +829,18 @@ public @UtilityClass class Functions {
 		return gcd(a, b % a);
 	}
 	
+	@func("get a unit from a string")
+	public Unit parseUnit(String str) {
+		try {
+			return Unit.valueOf(str);
+		} catch (IllegalArgumentException e) {
+			throw new CalculatorError(e);
+		}
+	}
+	
 	@func("least common multiple of 2 integers")
 	public Number lcm(@param("int") Number a, @param("int") Number b) {
-		check(areInts(a, b), TypeError.class);
+		check(areInts(a, b), TypeError);
 		
 		return Real.valueOf(lcm(((Real) a).intValue(), ((Real) b).intValue()));
 	}
@@ -774,22 +870,37 @@ public @UtilityClass class Functions {
 		return Math.round(d.value);
 	}
 	
+	@func
+	public Amount round(Amount a) {
+		return Amount.valueOf(Math.round(a.value), a.unit);
+	}
+	
 	@func("round to nearest number of decimals")
 	public double round(Real d, @param("int") Real numDecimals) {
-		check(isInt(numDecimals), TypeError.class);
-		check(numDecimals.value >= 0, DimensionError.class);
+		check(isInt(numDecimals), TypeError);
+		check(numDecimals.value >= 0, DimensionError);
 		BigDecimal bd = BigDecimal.valueOf(d.value);
 		return bd.round(new MathContext(castInt(numDecimals) + 1)).doubleValue();
 	}
 	
+	@func("round to nearest number of decimals")
+	public Amount round(Amount d, @param("int") Real numDecimals) {
+		check(isInt(numDecimals), TypeError);
+		check(numDecimals.value >= 0, DimensionError);
+		BigDecimal bd = BigDecimal.valueOf(d.value);
+		return Amount.valueOf(
+				bd.round(new MathContext(castInt(numDecimals) + 1)).doubleValue(),
+				d.unit);
+	}
+	
 	double round(Real d, int numDecimals) {
-		check(numDecimals >= 0, DimensionError.class);
+		check(numDecimals >= 0, DimensionError);
 		BigDecimal bd = BigDecimal.valueOf(d.value);
 		return bd.round(new MathContext(numDecimals)).doubleValue();
 	}
 	
 	public double round(double d, int numDecimals) {
-		check(numDecimals >= 0, DimensionError.class);
+		check(numDecimals >= 0, DimensionError);
 		BigDecimal bd = BigDecimal.valueOf(d);
 		return bd.round(new MathContext(numDecimals)).doubleValue();
 	}
@@ -874,12 +985,12 @@ public @UtilityClass class Functions {
 	
 	@func("greatest in set of numbers")
 	public Number max(Number[] a) {
-		check(a.length > 0, DimensionError.class);
+		check(a.length > 0, DimensionError);
 		Number max = a[0];
-		check(max instanceof Real, TypeError.class);
+		check(max instanceof Real, TypeError);
 		
 		for (int i = 1; i < a.length; i++) {
-			check(a[i] instanceof Real, TypeError.class);
+			check(a[i] instanceof Real, TypeError);
 			if (castDouble(a[i]) > castDouble(max))
 				max = a[i];
 		}
@@ -888,12 +999,12 @@ public @UtilityClass class Functions {
 	
 	@func("lowest in set of numbers")
 	public Number min(Number[] a) {
-		check(a.length > 0, DimensionError.class);
+		check(a.length > 0, DimensionError);
 		Number min = a[0];
-		check(min instanceof Real, TypeError.class);
+		check(min instanceof Real, TypeError);
 		
 		for (int i = 1; i < a.length; i++) {
-			check(a[i] instanceof Real, TypeError.class);
+			check(a[i] instanceof Real, TypeError);
 			if (castDouble(a[i]) < castDouble(min))
 				min = a[i];
 		}
@@ -918,8 +1029,13 @@ public @UtilityClass class Functions {
 	}
 	
 	@func("convert degrees to radians")
-	public Number toRadians(Real degrees) {
-		return Real.valueOf(Math.toRadians(degrees.value));
+	public Amount toRadians(Real degrees) {
+		return Amount.valueOf(Math.toRadians(degrees.value), SI.RADIAN);
+	}
+	
+	@func
+	public Amount toRadaians(Amount a) {
+		return a.convertTo(SI.RADIAN);
 	}
 	
 	@func("convert radians to degrees")
@@ -971,7 +1087,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] sin(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -984,7 +1100,7 @@ public @UtilityClass class Functions {
 	public Number[][] sin(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1013,7 +1129,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] asin(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1026,7 +1142,7 @@ public @UtilityClass class Functions {
 	public Number[][] asin(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1055,7 +1171,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] sinh(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1068,7 +1184,7 @@ public @UtilityClass class Functions {
 	public Number[][] sinh(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1097,7 +1213,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] asinh(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1110,7 +1226,7 @@ public @UtilityClass class Functions {
 	public Number[][] asinh(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1139,7 +1255,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] csc(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1152,7 +1268,7 @@ public @UtilityClass class Functions {
 	public Number[][] csc(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1184,7 +1300,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] acsc(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1197,7 +1313,7 @@ public @UtilityClass class Functions {
 	public Number[][] acsc(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1226,7 +1342,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] csch(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1239,7 +1355,7 @@ public @UtilityClass class Functions {
 	public Number[][] csch(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1266,7 +1382,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] acsch(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1279,7 +1395,7 @@ public @UtilityClass class Functions {
 	public Number[][] acsch(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1308,7 +1424,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] cos(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1321,7 +1437,7 @@ public @UtilityClass class Functions {
 	public Number[][] cos(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1350,7 +1466,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] acos(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1363,7 +1479,7 @@ public @UtilityClass class Functions {
 	public Number[][] acos(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1392,7 +1508,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] cosh(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1405,7 +1521,7 @@ public @UtilityClass class Functions {
 	public Number[][] cosh(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1434,7 +1550,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] acosh(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1447,7 +1563,7 @@ public @UtilityClass class Functions {
 	public Number[][] acosh(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1476,7 +1592,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] sec(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1489,7 +1605,7 @@ public @UtilityClass class Functions {
 	public Number[][] sec(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1521,7 +1637,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] asec(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1534,7 +1650,7 @@ public @UtilityClass class Functions {
 	public Number[][] asec(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1563,7 +1679,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] sech(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1576,7 +1692,7 @@ public @UtilityClass class Functions {
 	public Number[][] sech(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1603,7 +1719,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] asech(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1616,7 +1732,7 @@ public @UtilityClass class Functions {
 	public Number[][] asech(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1645,7 +1761,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] tan(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1658,7 +1774,7 @@ public @UtilityClass class Functions {
 	public Number[][] tan(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1687,7 +1803,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] atan(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1700,7 +1816,7 @@ public @UtilityClass class Functions {
 	public Number[][] atan(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1729,7 +1845,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] tanh(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1742,7 +1858,7 @@ public @UtilityClass class Functions {
 	public Number[][] tanh(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1771,7 +1887,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] atanh(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1784,7 +1900,7 @@ public @UtilityClass class Functions {
 	public Number[][] atanh(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1813,7 +1929,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] cot(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1826,7 +1942,7 @@ public @UtilityClass class Functions {
 	public Number[][] cot(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1858,7 +1974,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] acot(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1871,7 +1987,7 @@ public @UtilityClass class Functions {
 	public Number[][] acot(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1900,7 +2016,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] coth(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1913,7 +2029,7 @@ public @UtilityClass class Functions {
 	public Number[][] coth(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1940,7 +2056,7 @@ public @UtilityClass class Functions {
 	
 	@func
 	public Number[] acoth(Number[] array) {
-		check(array.length > 0, DimensionError.class);
+		check(array.length > 0, DimensionError);
 		
 		Number[] result = new Number[array.length];
 		for (int i = 0; i < array.length; i++) {
@@ -1953,7 +2069,7 @@ public @UtilityClass class Functions {
 	public Number[][] acoth(Number[][] matrix) {
 		int rowCount = rowCount(matrix);
 		int columnCount = columnCount(matrix);
-		check(rowCount > 0 && columnCount > 0, DimensionError.class);
+		check(rowCount > 0 && columnCount > 0, DimensionError);
 		
 		Number[][] result = new Number[rowCount][columnCount];
 		for (int r = 0; r < rowCount; r++) {
@@ -1968,26 +2084,26 @@ public @UtilityClass class Functions {
 	
 	@SuppressWarnings("unused")
 	private void check(boolean condition,
-			Supplier<? extends CalculatorError> errorSupplier) {
+			Supplier<? extends RuntimeException> errorSupplier) {
 		if (!condition)
 			throw errorSupplier.get();
 	}
 	
 	@SneakyThrows
 	public void check(boolean condition,
-			Class<? extends CalculatorError> errorType) {
+			Class<? extends RuntimeException> errorType) {
 		if (!condition)
 			throw errorType.newInstance();
 	}
 	
 	@SneakyThrows
-	public void check(boolean condition, Class<? extends CalculatorError> errorType,
+	public void check(boolean condition, Class<? extends RuntimeException> errorType,
 			Object... args) {
 		if (!condition) {
 			Class<?>[] parameterTypes = new Class<?>[args.length];
 			for (int i = 0; i < args.length; i++)
 				parameterTypes[i] = args[i].getClass();
-			Constructor<? extends CalculatorError> constructor =
+			Constructor<? extends Throwable> constructor =
 					errorType.getConstructor(parameterTypes);
 			throw constructor.newInstance(args);
 		}
@@ -2083,8 +2199,14 @@ public @UtilityClass class Functions {
 			return toBoolean((String) obj);
 		else if (obj instanceof Function)
 			return true;
+		else if (obj instanceof Amount)
+			return toBoolean((Amount) obj);
 		else
 			throw new TypeError(obj.getClass().getSimpleName());
+	}
+	
+	public boolean toBoolean(Amount a) {
+		return a.value != 0.0;
 	}
 	
 	public Object evalValue(Object obj) {
@@ -2095,4 +2217,5 @@ public @UtilityClass class Functions {
 		else
 			return obj;
 	}
+	
 }

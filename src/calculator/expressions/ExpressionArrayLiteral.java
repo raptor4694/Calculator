@@ -5,11 +5,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import calculator.CalculatorError;
-import calculator.DimensionError;
+import javax.measure.unit.Unit;
+
 import calculator.Scope;
-import calculator.TypeError;
+import calculator.Scope.FileScope;
 import calculator.Visitor;
+import calculator.errors.CalculatorError;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import calculator.values.Number;
 import calculator.values.Real;
 import lombok.experimental.ExtensionMethod;
@@ -26,10 +29,13 @@ public class ExpressionArrayLiteral implements Expression {
 	public Object eval(Scope scope) {
 		Class<?> type = null;
 		
+		scope = new FileScope(scope);
+		
 		List<Object> list = new ArrayList<>(elems.length);
 		
 		boolean isArray = false;
 		boolean nonArrayElements = false;
+		
 		for (Expression e : elems) {
 			Object obj = e.eval(scope);
 			list.add(obj);
@@ -76,6 +82,10 @@ public class ExpressionArrayLiteral implements Expression {
 					type = String.class;
 				else if (obj instanceof String[])
 					type = String[].class;
+				else if (obj instanceof Unit)
+					type = Unit.class;
+				else if (obj instanceof Unit[][])
+					type = Unit[].class;
 				else
 					throw new TypeError(obj.getClass().getSimpleName());
 			} else if (!type.isAssignableFrom(obj.getClass())) {
@@ -92,6 +102,11 @@ public class ExpressionArrayLiteral implements Expression {
 				if (size == -1)
 					size = ((String[]) obj).length;
 				else if (size != ((String[]) obj).length)
+					throw new DimensionError();
+			} else if (type == Unit[].class) {
+				if (size == -1)
+					size = ((Unit[]) obj).length;
+				else if (size != ((Unit[]) obj).length)
 					throw new DimensionError();
 			}
 			
@@ -130,8 +145,144 @@ public class ExpressionArrayLiteral implements Expression {
 				throw new TypeError(e);
 			}
 		}
-		
 		return result;
+		
+	}
+	
+	@Override
+	public Object evalOptionalValue(Scope scope) {
+		Class<?> type = null;
+		
+		scope.enterLocalScope();
+		
+		List<Object> list = new ArrayList<>(elems.length);
+		
+		boolean isArray = false;
+		boolean nonArrayElements = false;
+		boolean hasValue = true;
+		
+		try {
+			
+			for (Expression e : elems) {
+				Object obj = e.evalOptionalValue(scope);
+				if (obj != null) {
+					list.add(obj);
+					if (obj.getClass().isArray()) {
+						isArray = true;
+					} else {
+						nonArrayElements = true;
+					}
+				} else {
+					hasValue = false;
+				}
+			}
+			
+			if (!hasValue)
+				return null;
+			
+			if (!list.isEmpty() && isArray && nonArrayElements) {
+				List<Object> newList = new ArrayList<>(list.size());
+				for (Object obj : list) {
+					if (obj.getClass().isArray()) {
+						for (Object o : (Object[]) obj) {
+							newList.add(o);
+						}
+					} else {
+						newList.add(obj);
+					}
+				}
+				list = newList;
+			}
+			
+			Object[] objs = new Object[list.size()];
+			
+			int size = -1;
+			
+			for (int i = 0; i < list.size(); i++) {
+				Object obj = list.get(i);
+				
+				if (obj instanceof java.lang.Number) {
+					obj = Real.valueOf(((java.lang.Number) obj).doubleValue());
+				}
+				
+				if (obj instanceof Object[][])
+					throw new CalculatorError("too deeply-nested array");
+				if (type == null) {
+					if (obj instanceof Number)
+						type = Number.class;
+					else if (obj instanceof Number[])
+						type = Number[].class;
+					else if (obj instanceof String)
+						type = String.class;
+					else if (obj instanceof String[])
+						type = String[].class;
+					else if (obj instanceof Unit)
+						type = Unit.class;
+					else if (obj instanceof Unit[][])
+						type = Unit[].class;
+					else
+						throw new TypeError(obj.getClass().getSimpleName());
+				} else if (!type.isAssignableFrom(obj.getClass())) {
+					throw new TypeError(
+							"element type: " + obj.getClass().getSimpleName());
+				}
+				
+				if (type == Number[].class) {
+					if (size == -1)
+						size = ((Number[]) obj).length;
+					else if (size != ((Number[]) obj).length)
+						throw new DimensionError();
+				} else if (type == String[].class) {
+					if (size == -1)
+						size = ((String[]) obj).length;
+					else if (size != ((String[]) obj).length)
+						throw new DimensionError();
+				} else if (type == Unit[].class) {
+					if (size == -1)
+						size = ((Unit[]) obj).length;
+					else if (size != ((Unit[]) obj).length)
+						throw new DimensionError();
+				}
+				
+				objs[i] = obj;
+			}
+			
+			/*if (type == Number.class) {
+				
+				Number[] result = new Number[objs.length];
+				
+				for (int i = 0; i < objs.length; i++)
+					result[i] = (Number) objs[i];
+				
+				return result;
+				
+			} else if (type == Number[].class) {
+				
+				Number[][] result = new Number[objs.length][];
+				
+				for (int i = 0; i < objs.length; i++)
+					result[i] = ((Number[]) objs[i]).clone();
+				
+				return result;
+			} else
+				throw new TypeError(type.getSimpleName());*/
+			
+			Object[] result = (Object[]) Array.newInstance(type, objs.length);
+			for (int i = 0; i < objs.length; i++) {
+				try {
+					if (objs[i] instanceof Object[]) {
+						result[i] = ((Object[]) type.cast(objs[i])).clone();
+					} else {
+						result[i] = type.cast(objs[i]);
+					}
+				} catch (ArrayStoreException e) {
+					throw new TypeError(e);
+				}
+			}
+			return result;
+		} finally {
+			scope.exitLocalScope();
+		}
 	}
 	
 	@Override

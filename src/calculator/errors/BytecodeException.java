@@ -1,4 +1,6 @@
-package calculator;
+package calculator.errors;
+
+import calculator.Bytecode;
 
 public class BytecodeException extends Exception {
 	

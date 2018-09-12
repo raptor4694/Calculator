@@ -1,9 +1,13 @@
 package calculator.values;
 
+import static calculator.functions.Functions.*;
+
 import java.util.HashMap;
 import java.util.Map;
 
-import calculator.functions.Operators;
+import javax.measure.unit.Unit;
+
+import calculator.errors.TypeError;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
@@ -94,53 +98,184 @@ public class Real implements Number {
 	}
 	
 	@Override
+	public Number inverse() {
+		check(value != 0.0, DimensionError);
+		return value == 1.0? this : valueOf(1.0 / value);
+	}
+	
+	@Override
+	public Number sqrt() {
+		if (value < 0)
+			return Complex.sqrt(value, 0.0);
+		return valueOf(Math.sqrt(value));
+	}
+	
+	@Override
+	public Number cbrt() {
+		return valueOf(Math.cbrt(value));
+	}
+	
+	@Override
+	public Number root(int root) {
+		if (root == 1) {
+			return this;
+		} else if (root == 2) {
+			return sqrt();
+		} else if (root == 3) {
+			return cbrt();
+		} else {
+			check(root != 0, DimensionError);
+			if (root % 2 == 0 && value < 0) {
+				return Complex.pow(value, 0.0, 1.0 / root, 0.0);
+			} else {
+				return valueOf(Math.pow(value, 1.0 / root));
+			}
+		}
+	}
+	
+	@Override
 	public Number plus(Real r) {
-		return Operators.add(this, r);
+		return valueOf(value + r.value);
 	}
 	
 	@Override
 	public Number plus(Complex c) {
-		return Operators.add(this, c);
+		return Complex.valueOf(value + c.real, c.imag);
+	}
+	
+	@Override
+	public Number plus(Amount a) {
+		if (a.unit.isCompatible(Unit.ONE))
+			return Amount.valueOf(value + a.value, a.unit);
+		throw new TypeError();
 	}
 	
 	@Override
 	public Number minus(Real r) {
-		return Operators.subtract(this, r);
+		return valueOf(value - r.value);
 	}
 	
 	@Override
 	public Number minus(Complex c) {
-		return Operators.subtract(this, c);
+		return Complex.valueOf(value - c.real, -c.imag);
+	}
+	
+	@Override
+	public Number minus(Amount a) {
+		if (a.unit.isCompatible(Unit.ONE))
+			return Amount.valueOf(value - a.value, a.unit);
+		throw new TypeError();
 	}
 	
 	@Override
 	public Number times(Real r) {
-		return Operators.multiply(this, r);
+		return valueOf(value * r.value);
 	}
 	
 	@Override
 	public Number times(Complex c) {
-		return Operators.multiply(this, c);
+		return Complex.valueOf(value * c.real, value * c.imag);
+	}
+	
+	@Override
+	public Number times(Amount a) {
+		return Amount.valueOf(value * a.value, a.unit);
 	}
 	
 	@Override
 	public Number divide(Real r) {
-		return Operators.divide(this, r);
+		return valueOf(value / r.value);
 	}
 	
 	@Override
 	public Number divide(Complex c) {
-		return Operators.divide(this, c);
+		return Complex.divide(value, 0, c.real, c.imag);
+	}
+	
+	@Override
+	public Number divide(Amount a) {
+		return Amount.valueOf(value / a.value, Amount.inverseOf(a.unit));
 	}
 	
 	@Override
 	public Number pow(Real r) {
-		return Operators.pow(this, r);
+		if (r.value == 0)
+			return Real.ONE;
+		return valueOf(Math.pow(value, r.value));
 	}
 	
 	@Override
 	public Number pow(Complex c) {
-		return Operators.pow(this, c);
+		return Complex.pow(value, 0, c.real, c.imag);
+	}
+	
+	@Override
+	public Number pow(Amount a) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThan(Real r) {
+		return value > r.value;
+	}
+	
+	@Override
+	public boolean isGreaterThan(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThan(Amount a) {
+		check(a.unit.isCompatible(Unit.ONE), TypeError);
+		return value > a.value;
+	}
+	
+	@Override
+	public boolean isLessThan(Real r) {
+		return value < r.value;
+	}
+	
+	@Override
+	public boolean isLessThan(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThan(Amount a) {
+		check(a.unit.isCompatible(Unit.ONE), TypeError);
+		return value < a.value;
+	}
+	
+	@Override
+	public boolean isGreaterThanOrEqualTo(Real r) {
+		return value >= r.value;
+	}
+	
+	@Override
+	public boolean isGreaterThanOrEqualTo(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThanOrEqualTo(Amount a) {
+		check(a.unit.isCompatible(Unit.ONE), TypeError);
+		return value >= a.value;
+	}
+	
+	@Override
+	public boolean isLessThanOrEqualTo(Real r) {
+		return value <= r.value;
+	}
+	
+	@Override
+	public boolean isLessThanOrEqualTo(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThanOrEqualTo(Amount a) {
+		check(a.unit.isCompatible(Unit.ONE), TypeError);
+		return value <= a.value;
 	}
 	
 }

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import calculator.errors.SyntaxError;
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionAbs;
 import calculator.expressions.ExpressionArrayLiteral;
@@ -74,7 +75,7 @@ public class Parser {
 	
 	protected Tokenizer tkzr;
 	@Getter
-	protected Token token;
+	protected Token token, lastToken;
 	@Getter
 	private boolean inIndex = false;
 	@Getter
@@ -91,6 +92,7 @@ public class Parser {
 	protected Parser(Tokenizer tkzr) {
 		this.tkzr = tkzr;
 		token = tkzr.currentToken();
+		lastToken = null;
 	}
 	
 	public boolean isMultiplyChainExprDisabled() {
@@ -141,6 +143,7 @@ public class Parser {
 	
 	public void nextToken() {
 		if (token == null || token.kind != EOF) {
+			lastToken = token;
 			token = tkzr.nextToken();
 			
 			Token temp = aliases.get(token);
@@ -168,7 +171,7 @@ public class Parser {
 	
 	public void accept(TokenKind kind) {
 		if (!eat(kind))
-			throw new SyntaxError(token.pos, kind, token.kind);
+			throw new SyntaxError(token, kind);
 	}
 	
 	private boolean disableMultiplyChain = false;
@@ -198,7 +201,7 @@ public class Parser {
 		case ASIN: case ASINH: case ACOS: case ACOSH: case ATAN: case ATANH:
 		case ACSC: case ACSCH: case ASEC: case ASECH: case ACOT: case ACOTH:
 		case IF: case FOR: case WHILE: case TRY: case LOCAL: case RETURN:
-		case BREAK: case DIM: case COMPILE: case DECOMPILE: case ALIAS: case MOD:
+		case BREAK: case DIM: case COMPILE: case DECOMPILE: case BYTECODE: case ALIAS: case MOD:
 		case e: case pi: case i: case NaN: case Infinity: //@formatter:on
 			return true;
 		default:
@@ -283,92 +286,96 @@ public class Parser {
 	}
 	
 	public Expression multi(Expression e) {
-		if (eat(SEMI) && indicatesStartOfExpr(
-				token.kind)/*token.kind != EOF && token.kind != RPAREN && token.kind != RBRACE && token.kind != RBRACKET*/) {
-			List<Expression> list = new ArrayList<>();
-			list.add(e);
-			labelA:
-			if (token.kind != SEMI) {
-				for (ParserHookExpressionSupplier hook : multi_hooks_pre) {
-					Expression expr = hook.test(this);
-					if (expr != null) {
-						list.add(expr);
-						break labelA;
+		if (eat(SEMI)) {
+			if (indicatesStartOfExpr(
+					token.kind)/*token.kind != EOF && token.kind != RPAREN && token.kind != RBRACE && token.kind != RBRACKET*/) {
+				List<Expression> list = new ArrayList<>();
+				list.add(e);
+				labelA:
+				if (token.kind != SEMI) {
+					for (ParserHookExpressionSupplier hook : multi_hooks_pre) {
+						Expression expr = hook.test(this);
+						if (expr != null) {
+							list.add(expr);
+							break labelA;
+						}
+					}
+					if (eat(RETURN)) {
+						switch (token.kind) {
+						case SEMI:
+						case EOF:
+						case RPAREN:
+						case RBRACE:
+						case RBRACKET:
+						case ELSE:
+						case COMMA:
+							list.add(new ExpressionReturn(null));
+							break;
+						default:
+							list.add(new ExpressionReturn(assign()));
+						}
+					} else {
+						switch (token.kind) {
+						case IF:
+							list.add(parseIf(this::assign, true));
+							break;
+						case LOCAL:
+							list.add(parseLocal(this::assign));
+							break;
+						case TRY:
+							list.add(parseTry(this::assign, true));
+							break;
+						case FOR:
+							list.add(parseFor(this::assign));
+							break;
+						case WHILE:
+							list.add(parseWhile(this::assign));
+							break;
+						case ELSE:
+							break labelA;
+						default:
+							list.add(assign());
+						}
+						
 					}
 				}
-				if (eat(RETURN)) {
+				label0:
+				while (eat(SEMI)) {
 					switch (token.kind) {
 					case SEMI:
+						break;
 					case EOF:
 					case RPAREN:
 					case RBRACE:
 					case RBRACKET:
 					case ELSE:
 					case COMMA:
-						list.add(new ExpressionReturn(null));
+						break label0;
+					case RETURN:
+						nextToken();
+						switch (token.kind) {
+						case SEMI:
+						case EOF:
+						case RPAREN:
+						case RBRACE:
+						case RBRACKET:
+						case ELSE:
+						case COMMA:
+							list.add(new ExpressionReturn(null));
+							break;
+						default:
+							list.add(new ExpressionReturn(assign()));
+						}
 						break;
-					default:
-						list.add(new ExpressionReturn(assign()));
-					}
-				} else {
-					switch (token.kind) {
-					case IF:
-						list.add(parseIf(this::assign, true));
-						break;
-					case LOCAL:
-						list.add(parseLocal(this::assign));
-						break;
-					case TRY:
-						list.add(parseTry(this::assign, true));
-						break;
-					case FOR:
-						list.add(parseFor(this::assign));
-						break;
-					case WHILE:
-						list.add(parseWhile(this::assign));
-						break;
-					case ELSE:
-						break labelA;
 					default:
 						list.add(assign());
 					}
-					
 				}
+				
+				e = new ExpressionMulti(list.toArray(new Expression[0]));
+			} else {
+				e = new ExpressionMulti(e);
 			}
-			label0:
-			while (eat(SEMI)) {
-				switch (token.kind) {
-				case SEMI:
-					break;
-				case EOF:
-				case RPAREN:
-				case RBRACE:
-				case RBRACKET:
-				case ELSE:
-				case COMMA:
-					break label0;
-				case RETURN:
-					nextToken();
-					switch (token.kind) {
-					case SEMI:
-					case EOF:
-					case RPAREN:
-					case RBRACE:
-					case RBRACKET:
-					case ELSE:
-					case COMMA:
-						list.add(new ExpressionReturn(null));
-						break;
-					default:
-						list.add(new ExpressionReturn(assign()));
-					}
-					break;
-				default:
-					list.add(assign());
-				}
-			}
-			
-			e = new ExpressionMulti(list.toArray(new Expression[0]));
 		}
 		return e;
 	}
@@ -600,7 +607,7 @@ public class Parser {
 	}
 	
 	public Expression conditional() {
-		return conditional(or());
+		return conditional(mul3());
 	}
 	
 	public final List<ParserHookExpressionModifier> conditional_hooks_pre =
@@ -627,6 +634,64 @@ public class Parser {
 		}
 		
 		return e;
+	}
+	
+	public Expression mul3() {
+		Expression e = or();
+		outer:
+		for (;;) {
+			if (eat(LPAREN)) {
+				List<Expression> args = new ArrayList<>();
+				if (token.kind != RPAREN) {
+					do {
+						args.add(expr());
+					} while (eat(COMMA));
+				}
+				accept(RPAREN);
+				if (args.size() == 1) {
+					Expression rhs;
+					if (eat(CARET)) {
+						rhs = new ExpressionBinaryOperator(args.get(0),
+								EnumOperator.POW, prefix());
+					} else if (eat(DOTCARET)) {
+						rhs = new ExpressionElementwiseBinaryOperator(args.get(0),
+								EnumOperator.POW, prefix());
+					} else
+						rhs = args.get(0);
+					
+					if (e instanceof ExpressionMultiplyChain) {
+						((ExpressionMultiplyChain) e).exprs.add(rhs);
+					} else {
+						ArrayList<Expression> list = new ArrayList<>();
+						list.add(e);
+						list.add(rhs);
+						e = new ExpressionMultiplyChain(list);
+					}
+					continue;
+					
+				}
+				if (e instanceof ExpressionMultiplyChain) {
+					ExpressionMultiplyChain chain = (ExpressionMultiplyChain) e;
+					int last = chain.exprs.size() - 1;
+					chain.exprs.set(last, new ExpressionFunctionCall(
+							chain.exprs.get(last), args.toArray(new Expression[0])));
+				} else {
+					e = new ExpressionFunctionCall(e,
+							args.toArray(new Expression[0]));
+				}
+			} else if (token.kind != BAR && indicatesStartOfExpr(token.kind)) {
+				if (e instanceof ExpressionMultiplyChain) {
+					((ExpressionMultiplyChain) e).exprs.add(or());
+				} else {
+					ArrayList<Expression> list = new ArrayList<>();
+					list.add(e);
+					list.add(or());
+					e = new ExpressionMultiplyChain(list);
+				}
+			} else {
+				return e;
+			}
+		}
 	}
 	
 	public Expression or() {
@@ -744,7 +809,7 @@ public class Parser {
 	}
 	
 	public Expression comp() {
-		return comp(add());
+		return comp(convert());
 	}
 	
 	public final List<ParserHookExpressionModifier> comp_hooks_pre =
@@ -773,7 +838,7 @@ public class Parser {
 				EnumOperator operator = token.kind.getBinaryOperator();
 				boolean elementWise = ELEMENTWISE_OPERATORS.contains(token.kind);
 				nextToken();
-				Expression other = add();
+				Expression other = convert();
 				if (e instanceof ExpressionComparisonChain) {
 					ExpressionComparisonChain chain = (ExpressionComparisonChain) e;
 					chain.exprs.add(other);
@@ -817,6 +882,14 @@ public class Parser {
 				return e;
 			}
 		}
+	}
+	
+	public Expression convert() {
+		Expression e = add();
+		while (eat(SLIMARROW)) {
+			e = new ExpressionBinaryOperator(e, EnumOperator.CONVERT, add());
+		}
+		return e;
 	}
 	
 	public Expression add() {
@@ -871,6 +944,9 @@ public class Parser {
 			new ArrayList<>(), mul_hooks_post = new ArrayList<>();
 	
 	public Expression mul(Expression e) {
+		boolean firstWasNumber = e instanceof ExpressionLiteral
+				&& ((ExpressionLiteral) e).constantValue
+				&& ((ExpressionLiteral) e).value.get() instanceof Number;
 		outer:
 		for (;;) {
 			for (ParserHookExpressionModifier hook : mul_hooks_pre) {
@@ -880,64 +956,68 @@ public class Parser {
 					continue outer;
 				}
 			}
-			if (eat(LPAREN)) {
-				List<Expression> args = new ArrayList<>();
-				if (token.kind != RPAREN) {
-					do {
-						args.add(expr());
-					} while (eat(COMMA));
-				}
-				accept(RPAREN);
-				if (args.size() == 1) {
-					Expression rhs;
-					if (eat(CARET)) {
-						rhs = new ExpressionBinaryOperator(args.get(0),
-								EnumOperator.POW, prefix());
-					} else if (eat(DOTCARET)) {
-						rhs = new ExpressionElementwiseBinaryOperator(args.get(0),
-								EnumOperator.POW, prefix());
-					} else
-						rhs = args.get(0);
-					
+			if (firstWasNumber) {
+				if (eat(LPAREN)) {
+					List<Expression> args = new ArrayList<>();
+					if (token.kind != RPAREN) {
+						do {
+							args.add(expr());
+						} while (eat(COMMA));
+					}
+					accept(RPAREN);
+					if (args.size() == 1) {
+						Expression rhs;
+						if (eat(CARET)) {
+							rhs = new ExpressionBinaryOperator(args.get(0),
+									EnumOperator.POW, prefix());
+						} else if (eat(DOTCARET)) {
+							rhs = new ExpressionElementwiseBinaryOperator(
+									args.get(0), EnumOperator.POW, prefix());
+						} else
+							rhs = args.get(0);
+						
+						if (e instanceof ExpressionMultiplyChain) {
+							((ExpressionMultiplyChain) e).exprs.add(rhs);
+						} else {
+							ArrayList<Expression> list = new ArrayList<>();
+							list.add(e);
+							list.add(rhs);
+							e = new ExpressionMultiplyChain(list);
+						}
+						continue;
+						
+					}
 					if (e instanceof ExpressionMultiplyChain) {
-						((ExpressionMultiplyChain) e).exprs.add(rhs);
+						ExpressionMultiplyChain chain = (ExpressionMultiplyChain) e;
+						int last = chain.exprs.size() - 1;
+						chain.exprs.set(last,
+								new ExpressionFunctionCall(chain.exprs.get(last),
+										args.toArray(new Expression[0])));
+					} else {
+						e = new ExpressionFunctionCall(e,
+								args.toArray(new Expression[0]));
+					}
+				} else if (token.kind != BAR && indicatesStartOfExpr(token.kind)) {
+					if (e instanceof ExpressionMultiplyChain) {
+						((ExpressionMultiplyChain) e).exprs.add(mul2());
 					} else {
 						ArrayList<Expression> list = new ArrayList<>();
 						list.add(e);
-						list.add(rhs);
+						list.add(mul2());
 						e = new ExpressionMultiplyChain(list);
 					}
-					continue;
-					
-				}
-				if (e instanceof ExpressionMultiplyChain) {
-					ExpressionMultiplyChain chain = (ExpressionMultiplyChain) e;
-					int last = chain.exprs.size() - 1;
-					chain.exprs.set(last, new ExpressionFunctionCall(
-							chain.exprs.get(last), args.toArray(new Expression[0])));
 				} else {
-					e = new ExpressionFunctionCall(e,
-							args.toArray(new Expression[0]));
-				}
-			} else if (token.kind != BAR && indicatesStartOfExpr(token.kind)) {
-				if (e instanceof ExpressionMultiplyChain) {
-					((ExpressionMultiplyChain) e).exprs.add(mul2());
-				} else {
-					ArrayList<Expression> list = new ArrayList<>();
-					list.add(e);
-					list.add(mul2());
-					e = new ExpressionMultiplyChain(list);
-				}
-			} else {
-				for (ParserHookExpressionModifier hook : mul_hooks_post) {
-					Expression expr = hook.test(this, e);
-					if (expr != null && expr != e) {
-						e = expr;
-						continue outer;
+					for (ParserHookExpressionModifier hook : mul_hooks_post) {
+						Expression expr = hook.test(this, e);
+						if (expr != null && expr != e) {
+							e = expr;
+							continue outer;
+						}
 					}
+					return e;
 				}
+			} else
 				return e;
-			}
 		}
 	}
 	
@@ -1010,6 +1090,9 @@ public class Parser {
 			nextToken();
 			return new ExpressionUnaryOperator(operator, pow());
 		}
+		case DEGREE:
+			nextToken();
+			return new ExpressionUnaryOperator(EnumOperator.DEGREES_PREFIX, pow());
 		case SUBSUB: {
 			Expression e = pow().skipParens();
 			if (e instanceof ExpressionReferenceable)
@@ -1121,10 +1204,15 @@ public class Parser {
 				accept(RPAREN);
 			}
 			break;
+		
+		case BYTECODE:
 		case COMPILE:
 			e = new ExpressionLiteral(token.kind.getFunction());
+			boolean bytecode = token.kind == BYTECODE;
 			nextToken();
+			
 			if (eat(LPAREN)) {
+				Expression result;
 				switch (token.kind) {
 				case RBRACE:
 				case RBRACKET:
@@ -1132,12 +1220,28 @@ public class Parser {
 					throw new SyntaxError(token);
 				case STRING:
 				case WORD:
-					if (peekToken(RPAREN)) {
-						e = new ExpressionFunctionCall(e, factor());
+					if (peekToken(RPAREN) || bytecode && peekToken(COMMA)) {
+						// e = new ExpressionFunctionCall(e, factor());
+						result = factor();
 						break;
 					}
 				default:
-					e = new ExpressionLiteral(expr().toCompiledString());
+					result = new ExpressionLiteral(expr().toEvalString());
+					/*if (bytecode) {
+						Expression ex = new ExpressionLiteral(expr().toEvalString());
+						if (eat(COMMA)) {
+							e = new ExpressionFunctionCall(e, ex, expr());
+						} else {
+							e = new ExpressionFunctionCall(e, ex);
+						}
+					} else
+						e = new ExpressionFunctionCall(e,
+								new ExpressionLiteral(expr().toEvalString()));*/
+				}
+				if (bytecode && eat(COMMA)) {
+					e = new ExpressionFunctionCall(e, result, expr());
+				} else {
+					e = new ExpressionFunctionCall(e, result);
 				}
 				accept(RPAREN);
 			}
@@ -1150,22 +1254,21 @@ public class Parser {
 				case LT:
 				case LPAREN:
 				case LBRACE:
-					try {
-						Tokenizer temp = tkzr.dup();
-						Expression arg = new CompiledParser(temp).expr();
-						e = new ExpressionLiteral(arg.toEvalString());
-						tkzr = temp;
-						token = tkzr.currentToken();
-						break;
-					} catch (SyntaxError ex) {
-						ex.printStackTrace();
-					}
-				case WORD:
-				case STRING:
+					// try {
+					Tokenizer temp = tkzr.dup();
+					Expression arg = new CompiledParser(temp).expr();
+					e = new ExpressionLiteral(arg.toEvalString());
+					tkzr = temp;
+					token = tkzr.currentToken();
+					break;
+					
+				// case WORD:
+				// case STRING:
+				default:
 					e = new ExpressionFunctionCall(e, expr());
 					break;
-				default:
-					throw new SyntaxError(token);
+				// default:
+				// throw new SyntaxError(token);
 				}
 				accept(RPAREN);
 			}
@@ -1282,7 +1385,27 @@ public class Parser {
 			String funcname = token.stringValue();
 			nextToken();
 			e = new ExpressionVariable(funcname);
-			if (eat(LPAREN)) {
+			if (funcname.equals("load") && token.kind == LT) {
+				StringBuilder b = new StringBuilder("<");
+				nextToken();
+				if (token.kind != WORD) {
+					accept(WORD);
+				}
+				b.append(token.stringValue());
+				nextToken();
+				if (eat(DOT)) {
+					b.append('.');
+					if (token.kind != WORD) {
+						accept(WORD);
+					}
+					b.append(token.stringValue());
+					nextToken();
+				}
+				accept(GT);
+				b.append('>');
+				e = new ExpressionFunctionCall(e,
+						new ExpressionLiteral(b.toString()));
+			} else if (eat(LPAREN)) {
 				ArrayList<Expression> args = new ArrayList<>();
 				if (token.kind != RPAREN) {
 					do {
@@ -1532,10 +1655,10 @@ public class Parser {
 			
 			accept(COMMA);
 			
-			y = add();
+			y = convert();
 			
 			if (eat(COMMA)) {
-				Expression z = add();
+				Expression z = convert();
 				
 				e = new ExpressionArrayLiteral(x, y, z);
 			} else {
@@ -1741,6 +1864,11 @@ public class Parser {
 					}
 					break;
 				}*/
+			case DEGREE:
+				if (!indicatesStartOfExpr(tkzr.peekToken(1).kind)) {
+					e = new ExpressionUnaryOperator(EnumOperator.DEGREES_POSTFIX, e);
+					break;
+				}
 			default:
 				for (ParserHookExpressionModifier hook : postfix_hooks_post) {
 					Expression expr = hook.test(this, e);
@@ -2059,4 +2187,137 @@ public class Parser {
 		}
 		return result;
 	}
+	/*
+	public boolean indicatesStartOfUnit(Token t) {
+		if (t.kind != WORD)
+			return false;
+		try {
+			UnitFormat.getUCUMInstance().parseSingleUnit(t.stringValue(),
+					new ParsePosition(0));
+			return true;
+		} catch (ParseException e) {
+			return false;
+		}
+	}
+	
+	public Unit parseUnit() {
+		Unit result = Unit.ONE;
+		switch (token.kind) {
+		case WORD:
+			result = parseSingleUnit();
+			break;
+		case LPAREN:
+			nextToken();
+			result = parseProductUnit();
+			accept(RPAREN);
+			break;
+		}
+		while (true) {
+			switch (token.kind) {
+			case CARET:
+				nextToken();
+				int exp, root;
+				
+				if (eat(LPAREN)) {
+					if (token.kind != NUMBER)
+						accept(NUMBER);
+					double d = token.doubleValue();
+					if (d != (int) d)
+						throw new SyntaxError(token.pos,
+								"Expected INTEGER, got DECIMAL");
+					
+					exp = (int) d;
+					
+					nextToken();
+					
+					if (eat(SLASH)) {
+						if (token.kind != NUMBER)
+							accept(NUMBER);
+						d = token.doubleValue();
+						if (d != (int) d)
+							throw new SyntaxError(token.pos,
+									"Expected INTEGER, got DECIMAL");
+						root = (int) d;
+						nextToken();
+					} else {
+						root = 1;
+					}
+					accept(RPAREN);
+				} else if (token.kind != NUMBER)
+					accept(NUMBER);
+				else {
+					double d = token.doubleValue();
+					if (d != (int) d)
+						throw new SyntaxError(token.pos,
+								"Expected INTEGER, got DECIMAL");
+					nextToken();
+					exp = (int) d;
+					root = 1;
+				}
+				
+				if (exp != 1) {
+					result = result.pow(exp);
+				}
+				if (root != 1) {
+					result = result.root(root);
+				}
+				break;
+			case STAR:
+				if (token.kind == NUMBER) {
+					double d = token.doubleValue();
+					nextToken();
+					if (d != 1) {
+						result = result.times(d);
+					}
+				} else {
+					result = result.times(parseProductUnit());
+				}
+				break;
+			case SLASH:
+				nextToken();
+				if (token.kind == NUMBER) {
+					double d = token.doubleValue();
+					nextToken();
+					if (d != 1.0) {
+						result = result.divide(d);
+					}
+				} else {
+					result = result.divide(parseProductUnit());
+				}
+				break;
+			case PLUS:
+				nextToken();
+				if (token.kind == NUMBER) {
+					double d = token.doubleValue();
+					nextToken();
+					if (d != 1.0) {
+						result = result.plus(d);
+					}
+				} else {
+					accept(NUMBER);
+				}
+				break;
+			case EOF:
+			case RPAREN:
+				return result;
+			default:
+				throw new ParseException("unexpected token " + token,
+						pos.getIndex());
+			}
+			token = nextToken(csq, pos);
+		}
+	}
+	
+	protected Unit parseSingleUnit() {
+		if (token.kind != WORD)
+			accept(WORD);
+		String name = token.stringValue();
+		nextToken();
+		try {
+			return UnitFormat.getUCUMInstance().parseSingleUnit(name,
+					new ParsePosition(0));
+		} catch (ParseException e) {
+			throw new SyntaxError(token.pos, "Expected UNIT NAME, got " + name);
+		}
+	}*/
 }

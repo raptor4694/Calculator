@@ -1,16 +1,16 @@
 package calculator.functions;
 
+import static calculator.Printer.*;
 import static calculator.functions.Functions.*;
 
 import java.util.Arrays;
 
-import calculator.CalculatorError;
 import calculator.Console;
 import calculator.Parser;
 import calculator.Printer;
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.func;
+import calculator.errors.CalculatorError;
 import calculator.values.Function;
 import calculator.values.MethodFunction;
 import calculator.values.Number;
@@ -22,8 +22,8 @@ public @UtilityClass class Operations {
 	
 	@func("swap rows in a matrix")
 	public void RowSwap(Number[][] matrix, Real row1, Real row2) {
-		check(row1.isInt(), TypeError.class);
-		check(row2.isInt(), TypeError.class);
+		check(row1.isInt(), TypeError);
+		check(row2.isInt(), TypeError);
 		
 		RowSwap(matrix, row1.intValue(), row2.intValue());
 	}
@@ -39,8 +39,8 @@ public @UtilityClass class Operations {
 	
 	@func("swap columns in a matrix")
 	public void ColumnSwap(Number[][] matrix, Real col1, Real col2) {
-		check(col1.isInt(), TypeError.class);
-		check(col2.isInt(), TypeError.class);
+		check(col1.isInt(), TypeError);
+		check(col2.isInt(), TypeError);
 		
 		ColumnSwap(matrix, col1.intValue(), col2.intValue());
 	}
@@ -56,8 +56,8 @@ public @UtilityClass class Operations {
 	
 	@func("swap two elements in an array")
 	public void Swap(Number[] array, Real idx1, Real idx2) {
-		check(idx1.isInt(), TypeError.class);
-		check(idx2.isInt(), TypeError.class);
+		check(idx1.isInt(), TypeError);
+		check(idx2.isInt(), TypeError);
 		
 		Swap(array, idx1.intValue(), idx2.intValue());
 	}
@@ -72,8 +72,8 @@ public @UtilityClass class Operations {
 	// modifies the array directly, but also returns it
 	public Number[] sort(Number[] set) {
 		Arrays.sort(set, (a1, a2) -> {
-			check(a1 instanceof Real, TypeError.class);
-			check(a2 instanceof Real, TypeError.class);
+			check(a1 instanceof Real, TypeError);
+			check(a2 instanceof Real, TypeError);
 			return Double.compare(((Real) a1).value, ((Real) a2).value);
 		});
 		return set;
@@ -82,8 +82,8 @@ public @UtilityClass class Operations {
 	@func("parallel sort-merge that breaks the array into sub-arrays that are themselves sorted and then merged")
 	public Number[] parallelSort(Number[] set) {
 		Arrays.parallelSort(set, (a1, a2) -> {
-			check(a1 instanceof Real, TypeError.class);
-			check(a2 instanceof Real, TypeError.class);
+			check(a1 instanceof Real, TypeError);
+			check(a2 instanceof Real, TypeError);
 			return Double.compare(((Real) a1).value, ((Real) a2).value);
 		});
 		return set;
@@ -115,10 +115,19 @@ public @UtilityClass class Operations {
 		SetDescription(func, null);
 	}
 	
+	@func("print debug info on a particular method")
+	public void Debug(Function f) {
+		println(f.getDescription());
+		if (f instanceof MethodFunction) {
+			MethodFunction m = (MethodFunction) f;
+			println("min arg count = " + m.minArgCount());
+			println("max arg count = " + m.maxArgCount());
+		}
+	}
+	
 	@func("print debug info")
-	public void Debug() {
+	public void Debug(Scope scope) {
 		Printer.println("Last expr: " + Console.getLast());
-		Scope scope = Console.getScope();
 		Printer.println("Variables:");
 		int level = 0;
 		boolean found = false;
@@ -137,6 +146,7 @@ public @UtilityClass class Operations {
 				Printer.println("\t\t(none)");
 			
 			scope = scope.parent;
+			++level;
 		}
 		if (!found)
 			Printer.println("\t(none)");

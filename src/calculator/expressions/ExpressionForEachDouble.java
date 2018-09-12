@@ -3,8 +3,9 @@ package calculator.expressions;
 import static calculator.functions.Functions.*;
 
 import calculator.Scope;
-import calculator.TypeError;
+import calculator.Scope.FileScope;
 import calculator.Visitor;
+import calculator.errors.TypeError;
 import calculator.values.Real;
 import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
@@ -31,7 +32,7 @@ public class ExpressionForEachDouble implements Expression {
 			java.util.function.Function<Scope, Object> evalValueFunction) {
 		Object obj = array.eval(scope);
 		
-		scope = new Scope(scope);
+		scope = new FileScope(scope);
 		
 		Object last = null;
 		

@@ -2,9 +2,9 @@ package calculator.values;
 
 import java.util.Arrays;
 
-import calculator.CalculatorError;
-import calculator.DimensionError;
 import calculator.Scope;
+import calculator.errors.CalculatorError;
+import calculator.errors.DimensionError;
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionMulti;
 import calculator.expressions.ExpressionReturn;
@@ -22,15 +22,21 @@ public class UserFunction implements Function {
 	@Override
 	public Object callOptionalValue(Scope scope, Object... args) {
 		if (args.length != varnames.length)
-			throw new DimensionError();
+			throw new DimensionError("in function " + name + ": varnames = "
+					+ Arrays.toString(varnames) + "; args = "
+					+ Arrays.toString(args));
 		
 		// Object ans = null;
+		
+		// scope.enterLocalScope();
 		
 		scope = new Scope(scope);
 		
 		for (int i = 0; i < varnames.length; i++) {
-			scope.setVariable(varnames[i], args[i]);
+			scope.setVariableLocally(varnames[i], args[i]);
 		}
+		
+		// scope.exitLocalScope();
 		
 		Object result;
 		

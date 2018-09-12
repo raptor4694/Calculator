@@ -1,5 +1,7 @@
 package calculator;
 
+import calculator.errors.CalculatorError;
+
 public class CannotRedefVarError extends CalculatorError {
 	/**
 	 * 

@@ -1,10 +1,16 @@
 package calculator;
 
+import static calculator.functions.Functions.*;
+
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
+import javax.measure.unit.Unit;
+import javax.measure.unit.UnitFormat;
+
 import calculator.values.Function;
 import calculator.values.Number;
+import calculator.values.Real;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 
@@ -27,6 +33,18 @@ public @UtilityClass class Printer {
 	public void print(String s) {
 		System.out.print(s);
 		printedLine = false;
+	}
+	
+	@func
+	public void print(Unit u) {
+		System.out.print(UnitFormat.getInstance().format(u));
+		printedLine = false;
+	}
+	
+	@func
+	public void println(Unit u) {
+		print(u);
+		println();
 	}
 	
 	@func
@@ -95,6 +113,20 @@ public @UtilityClass class Printer {
 	}
 	
 	@func
+	public String toString(Real r, Real radix) {
+		check(radix.isInt(), TypeError);
+		check(r.isInt(), TypeError);
+		return Long.toString((long) r.doubleValue(), radix.intValue());
+	}
+	
+	@func
+	public String toUnsignedString(Real r, Real radix) {
+		check(radix.isInt(), TypeError);
+		check(r.isInt(), TypeError);
+		return Long.toUnsignedString((long) r.doubleValue(), radix.intValue());
+	}
+	
+	@func
 	public String toString(Object[] array) {
 		return toString((Object) array);
 	}
@@ -115,7 +147,7 @@ public @UtilityClass class Printer {
 	}
 	
 	@SneakyThrows
-	String toString(Object obj) {
+	public String toString(Object obj) {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		PrintStream ps = new PrintStream(baos), oldOut = System.out;
 		System.setOut(ps);
@@ -139,9 +171,11 @@ public @UtilityClass class Printer {
 			print((Object[]) obj);
 		else if (obj instanceof Number)
 			print((Number) obj);
-		else if (obj instanceof String) {
+		else if (obj instanceof Unit)
+			print((Unit) obj);
+		else if (obj instanceof String)
 			print((String) obj);
-		} else
+		else
 			System.out.print(obj);
 	}
 }

@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import calculator.errors.VarNotFoundError;
 import calculator.values.EnumOperator;
 import calculator.values.Function;
 import calculator.values.MethodFunction;
@@ -65,6 +66,10 @@ public class Scope {
 	public void setVariable(String varname, Object value) {
 		if (value == null)
 			return;
+		if (isInLocalScope && !hasVariable(varname)) {
+			parent.setVariable(varname, value);
+			return;
+		}
 		if (value instanceof java.lang.Number)
 			value = Real.valueOf(((java.lang.Number) value).doubleValue());
 		if (hasVariable(varname)) {
@@ -177,6 +182,20 @@ public class Scope {
 		return Collections.unmodifiableSet(result);
 	}
 	
+	public boolean isTopLevel() {
+		return isTopLevel;
+	}
+	
+	private boolean isInLocalScope = false;
+	
+	public void enterLocalScope() {
+		isInLocalScope = true;
+	}
+	
+	public void exitLocalScope() {
+		isInLocalScope = false;
+	}
+	
 	private static class TopLevelScope extends Scope {
 		
 		private TopLevelScope() {
@@ -249,7 +268,15 @@ public class Scope {
 		}
 	}
 	
-	public boolean isTopLevel() {
-		return isTopLevel;
+	public static class FileScope extends Scope {
+		public FileScope(Scope parent) {
+			super(parent);
+		}
+		
+		@Override
+		public void setVariable(String varname, Object value) {
+			parent.setVariable(varname, value);
+		}
 	}
+	
 }

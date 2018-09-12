@@ -1,9 +1,9 @@
 package calculator.expressions;
 
-import calculator.CalculatorError;
 import calculator.Console;
 import calculator.Scope;
 import calculator.Visitor;
+import calculator.errors.CalculatorError;
 import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 

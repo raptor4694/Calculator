@@ -8,9 +8,9 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-import calculator.DimensionError;
 import calculator.Scope;
-import calculator.TypeError;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import calculator.functions.Operators;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -23,6 +23,8 @@ public enum EnumOperator implements Function {
 	MOD ("mod", 2),
 	NEGATE ("-", 1),
 	NOT ("!", 1),
+	DEGREES_PREFIX ("°", 1),
+	DEGREES_POSTFIX ("°", 1),
 	LT ("lesser", "<", 2),
 	GT ("greater", ">", 2),
 	LE ("lesser_equal", "<=", 2),
@@ -73,6 +75,7 @@ public enum EnumOperator implements Function {
 			return true;
 		}
 	},
+	CONVERT ("->", 2),
 	SCIENTIFIC_NOTATION ("e", "E", 2),
 	CARDINALITY ("#", 1),
 	FACTORIAL ("!", 1) {
@@ -231,7 +234,7 @@ public enum EnumOperator implements Function {
 						}
 					} else if (args[0] instanceof Object[]) {
 						Object[] array = (Object[]) args[0];
-						check(array.length > 0, DimensionError.class);
+						check(array.length > 0, DimensionError);
 						
 						if (args[1] instanceof Object[][]) {
 							Object[][] matrix = (Object[][]) args[1];
@@ -290,7 +293,7 @@ public enum EnumOperator implements Function {
 						Object value = args[0];
 						if (args[1] instanceof Object[]) {
 							Object[] array = (Object[]) args[1];
-							check(array.length > 0, DimensionError.class);
+							check(array.length > 0, DimensionError);
 							
 							Object[] result = (Object[]) Array.newInstance(
 									array.getClass().getComponentType(),
@@ -361,7 +364,7 @@ public enum EnumOperator implements Function {
 				if (method != null) {
 					if (args[0] instanceof Object[]) {
 						Object[] array = (Object[]) args[0];
-						check(array.length > 0, DimensionError.class);
+						check(array.length > 0, DimensionError);
 						
 						Object[] result = (Object[]) Array.newInstance(
 								array.getClass().getComponentType(), array.length);

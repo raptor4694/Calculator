@@ -1,4 +1,7 @@
-package calculator;
+package calculator.errors;
+
+import calculator.Token;
+import calculator.TokenKind;
 
 public class SyntaxError extends CalculatorError {
 	/**
@@ -16,8 +19,13 @@ public class SyntaxError extends CalculatorError {
 	}
 	
 	public SyntaxError(int pos, TokenKind expected, TokenKind got) {
-		super("syntax: at position " + pos + ": expected " + expected
-				+ ", got " + got);
+		super("syntax: at position " + pos + ": expected " + expected + ", got "
+				+ got);
+	}
+	
+	public SyntaxError(Token at, TokenKind expected) {
+		super("syntax: at position " + at.pos + ", near line " + at.line
+				+ ": expected " + expected + ", got " + at);
 	}
 	
 	public SyntaxError(int pos, String msg) {

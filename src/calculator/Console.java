@@ -14,9 +14,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
+import javax.measure.converter.ConversionException;
+
+import calculator.Scope.FileScope;
+import calculator.errors.BytecodeException;
+import calculator.errors.CalculatorError;
+import calculator.errors.DimensionError;
+import calculator.errors.SyntaxError;
+import calculator.errors.TypeError;
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionBreak;
 import calculator.expressions.ExpressionDeleteVariable;
@@ -54,66 +63,113 @@ public @UtilityClass class Console {
 	Parser parser;
 	
 	void run() {
-		
-		keys = new Scanner(System.in);
-		
-		scope = new Scope();
-		
-		scope.with(Functions.class);
-		scope.with(Operations.class);
-		scope.with(Printer.class);
-		scope.with(Console.class);
-		scope.setVariable("ans", 0.0);
-		scope.setTopLevel();
-		
-		scope = new Scope(scope);
-		
-		parser = new Parser("");
-		
-		parser.factor_hooks_post.add(parser -> {
-			if (parser.eat(TokenKind.AT)) {
-				Token t = parser.getToken();
-				Expression e;
-				/*	switch (t.kind) {
-					case WORD:
-						e = new ExpressionVariable("@" + t.stringValue());
-						break;
-					case NUMBER:
-						e = new ExpressionVariable("@" + t.doubleValue());
-						break;
-					case STRING:
-						e = new ExpressionVariable('"' + t.stringValue() + '"');
-						break;
-					default:*/
-				e = new ExpressionVariable(t.toString());
-				// }
-				parser.nextToken();
-				return e;
-			}
-			return null;
-		});
-		
-		welcome();
-		
-		System.out.print(">> ");
-		String input = keys.nextLine();
-		
-		while (!"quit".equals(input)) {
-			eval0(input);
+		try {
+			keys = new Scanner(System.in);
+			
+			scope = new Scope();
+			
+			scope.with(Functions.class);
+			scope.with(Operations.class);
+			scope.with(Printer.class);
+			scope.with(Console.class);
+			scope.setVariable("ans", 0.0);
+			scope.setTopLevel();
+			
+			scope = new Scope(scope);
+			
+			parser = new Parser("");
+			
+			parser.factor_hooks_post.add(parser -> {
+				if (parser.eat(TokenKind.AT)) {
+					Token t = parser.getToken();
+					Expression e;
+					/*	switch (t.kind) {
+						case WORD:
+							e = new ExpressionVariable("@" + t.stringValue());
+							break;
+						case NUMBER:
+							e = new ExpressionVariable("@" + t.doubleValue());
+							break;
+						case STRING:
+							e = new ExpressionVariable('"' + t.stringValue() + '"');
+							break;
+						default:*/
+					e = new ExpressionVariable(t.toString());
+					// }
+					parser.nextToken();
+					return e;
+				}
+				return null;
+			});
+			
+			welcome();
 			
 			System.out.print(">> ");
-			input = keys.nextLine();
+			
+			String input = null;
+			
+			while (input == null)
+				try {
+					input = keys.nextLine();
+				} catch (NoSuchElementException e) {}
+			
+			while (!"quit".equals(input)) {
+				eval0(input);
+				
+				System.out.print(">> ");
+				input = null;
+				while (input == null)
+					try {
+						input = keys.nextLine();
+					} catch (NoSuchElementException e) {}
+			}
+			
+		} catch (Throwable t) {
+			System.err.println(
+					"A fatal error has been thrown. The program will terminate.");
+			t.printStackTrace();
+		} finally {
+			keys.close();
 		}
-		
-		keys.close();
-		
+	}
+	
+	@func("set a global variable")
+	public void Global(@param("variable name") String varname, Object value,
+			@param("") Scope scope) {
+		while (!scope.isTopLevel())
+			scope = scope.parent;
+		scope.setVariable(varname, value);
+	}
+	
+	@func("set a normal variable")
+	public void Set(@param("variable name") String varname, Object value,
+			@param("") Scope scope) {
+		scope.setVariable(varname, value);
+	}
+	
+	@func("set a local variable")
+	public void SetLocal(@param("variable name") String varname, Object value,
+			@param("") Scope scope) {
+		scope.setVariableLocally(varname, value);
+	}
+	
+	@func("set a variable using the parent scope")
+	public void SetOuter(@param("variable name") String varname, Object value,
+			@param("") Scope scope) {
+		scope.parent.setVariable(varname, value);
 	}
 	
 	@func("read content of file into current scope")
 	public Object load(@param("filename") String filename) {
 		// throw new AssertionError();
 		Expression expr = loadExpression(filename);
-		return expr.eval(scope);
+		Scope s = new FileScope(scope);
+		s.setTopLevel();
+		try {
+			return expr.eval(s);
+		} catch (ExpressionReturn r) {
+			return r.value;
+		}
 	}
 	
 	@func("read file as raw text data")
@@ -160,10 +216,21 @@ public @UtilityClass class Console {
 				
 				scan.useDelimiter("\\A");
 				
-				String str = removeComments(scan.next().trim());
+				String str = scan.next();
 				
-				result = Console.parser.reset(str).parse();
-				
+				if (filename.endsWith(".math")) {
+					
+					str = removeComments(str.trim());
+					
+					result = Console.parser.reset(str).parse();
+				} else if (filename.endsWith(".mcmp")) {
+					result = BytecodeParser.parse(str.getBytes());
+				} else if (filename.endsWith(".mrep")) {
+					result = CompiledParser.parse(str.trim());
+				} else {
+					throw new CalculatorError(
+							"Do not know how to read this file extension");
+				}
 			} catch (Exception e) {
 				throw new CalculatorError(e);
 			}
@@ -318,7 +385,7 @@ public @UtilityClass class Console {
 	@func("writes to a file")
 	public void write(@param("filename") String filename, String contents) {
 		try {
-			Files.write(Paths.get(filename), contents.getBytes());
+			Files.write(Paths.get(dir() + "\\" + filename), contents.getBytes());
 		} catch (IOException e) {
 			throw new CalculatorError(e);
 		}
@@ -634,14 +701,57 @@ public @UtilityClass class Console {
 		return Parser.parse(str).eval(scope);
 	}
 	
-	@func("compiles the given expression to the internal representation")
+	@func("compiles the given expression to the explicit representation")
 	public String compile(String expr) {
+		try {
+			File f = new File(dir() + "//" + expr);
+			if (f.exists()) {
+				return loadExpression(expr).toCompiledString();
+			}
+		} catch (Exception e) {}
 		return Parser.parse(expr).toCompiledString();
 	}
 	
-	@func("converts internal representation of expression to evaluatable string")
+	@func("compiles the given expression to bytes and prints them to the console")
+	public Number[] bytecode(String expr) {
+		byte[] bytes = Parser.parse(expr).toBytecode();
+		Number[] nums = new Number[bytes.length];
+		for (int i = 0; i < nums.length; i++) {
+			nums[i] = Real.valueOf(bytes[i]);
+		}
+		return nums;
+	}
+	
+	@func("compiles the given expression to bytes and saves them to the given file")
+	public void bytecode(@param("expression") String expr,
+			@param("filename") String filename) {
+		byte[] bytes = Parser.parse(expr).toBytecode();
+		try {
+			Files.write(Paths.get(dir() + "\\" + filename), bytes);
+		} catch (IOException e) {
+			throw new CalculatorError(e);
+		}
+	}
+	
+	@func("converts explicit representation of expression to evaluatable string")
 	public String decompile(String expr) {
 		return CompiledParser.parse(expr).toEvalString();
+	}
+	
+	@func("converts an array of bytes (bytecode) into an evaluatable string")
+	public String decompile(Number[] arr) {
+		byte[] bytes = new byte[arr.length];
+		for (int i = 0; i < arr.length; i++) {
+			check(arr[i] instanceof Real, TypeError);
+			Real r = (Real) arr[i];
+			check(r.doubleValue() == (byte) r.intValue(), TypeError);
+			bytes[i] = (byte) r.doubleValue();
+		}
+		try {
+			return BytecodeParser.parse(bytes).toEvalString();
+		} catch (BytecodeException e) {
+			throw new CalculatorError(e);
+		}
 	}
 	
 	public String removeComments(String s) {
@@ -718,6 +828,9 @@ public @UtilityClass class Console {
 			first = true;
 			eval1(e);
 			first = false;
+		} catch (ConversionException e) {
+			println("Error: units");
+			lastError = e;
 		} catch (CalculatorError e) {
 			println(e.toString());
 			lastError = e;

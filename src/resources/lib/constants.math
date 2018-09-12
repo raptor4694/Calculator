@@ -1,3 +1,5 @@
-G = -6.67408E-11; //   m^3/(kg s^2)
-g = -9.81; //  m/s
-c = 299792458; // m/s
+G = -6.67408E-11 * try{__UNITS___; parseUnit("m^3*kg^-1*s^-2")} else 1; // m^3/(kg s^2)
+g = -9.81 * try{__UNITS___; parseUnit("m/s^2")} else 1; //  m/s
+c = 299792458 * try{__UNITS___; parseUnit("m/s")} else 1; // m/s
+
+return;

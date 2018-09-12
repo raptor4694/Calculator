@@ -1,20 +1,16 @@
 package calculator.expressions;
 
-import static calculator.functions.Functions.*;
-
 import java.util.Arrays;
 import java.util.function.BiFunction;
 
-import calculator.CalculatorError;
-import calculator.Console;
-import calculator.DimensionError;
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.Visitor;
+import calculator.errors.CalculatorError;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import calculator.functions.Functions;
 import calculator.values.EnumOperator;
 import calculator.values.Function;
-import calculator.values.MethodFunction;
 import calculator.values.Number;
 import calculator.values.Real;
 import lombok.experimental.ExtensionMethod;
@@ -31,8 +27,7 @@ public class ExpressionFunctionCall implements Expression {
 	
 	@Override
 	public Object eval(Scope scope) {
-		Object result = eval0(scope, func -> func::call,
-				(expr, scope2) -> expr.eval(scope2));
+		Object result = eval0(scope, func -> func::call);
 		if (result == null)
 			throw new CalculatorError("must return a value");
 		return result;
@@ -40,21 +35,19 @@ public class ExpressionFunctionCall implements Expression {
 	
 	@Override
 	public Object evalOptionalValue(Scope scope) {
-		return eval0(scope, func -> func::callOptionalValue,
-				(expr, scope2) -> expr.evalOptionalValue(scope2));
+		return eval0(scope, func -> func::callOptionalValue);
 	}
 	
 	private Object eval0(Scope scope,
-			java.util.function.Function<Function, BiFunction<Scope, Object[], Object>> callerSupplier,
-			BiFunction<Expression, Scope, Object> valueSupplier) {
+			java.util.function.Function<Function, BiFunction<Scope, Object[], Object>> callerSupplier) {
 		Object func = function.eval(scope);
 		
-		if (func instanceof MethodFunction
+		/*if (func instanceof MethodFunction
 				&& ((MethodFunction) func).getDeclaringClass() == Console.class
 				&& ((MethodFunction) func).getName().equals("load")
 				&& args.length == 1) {
 			Object obj = args[0].eval(scope);
-			check(obj instanceof String, TypeError.class);
+			check(obj instanceof String, TypeError);
 			/*File file = new File(Console.dir() + "\\" + (String) obj);
 			Expression result;
 			if (file.getName().endsWith(".math")) {
@@ -82,10 +75,9 @@ public class ExpressionFunctionCall implements Expression {
 						"Do not know how to read this file extension");
 			
 			System.out.println("Loaded " + result.toCompiledString());
-			*/
-			return valueSupplier.apply(Console.loadExpression((String) obj), scope);
 			
-		}
+			return valueSupplier.apply(Console.loadExpression((String) obj), scope);
+		}*/
 		
 		Object[] objs = new Object[args.length];
 		for (int i = 0; i < objs.length; i++)

@@ -1,8 +1,9 @@
 package calculator.expressions;
 
 import calculator.Scope;
-import calculator.TypeError;
+import calculator.Scope.FileScope;
 import calculator.Visitor;
+import calculator.errors.TypeError;
 import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;
 
@@ -28,7 +29,7 @@ public class ExpressionForEachSingle implements Expression {
 			java.util.function.Function<Scope, Object> evalValueFunction) {
 		Object obj = array.eval(scope);
 		
-		scope = new Scope(scope);
+		scope = new FileScope(scope);
 		Object last = null;
 		
 		if (obj instanceof Object[][]) {

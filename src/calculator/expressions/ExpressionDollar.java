@@ -1,8 +1,8 @@
 package calculator.expressions;
 
-import calculator.CalculatorError;
 import calculator.Scope;
 import calculator.Visitor;
+import calculator.errors.CalculatorError;
 import lombok.experimental.ExtensionMethod;
 
 @ExtensionMethod(String.class)

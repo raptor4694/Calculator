@@ -1,22 +1,24 @@
 package calculator.values;
 
+import static calculator.functions.Functions.*;
 import static calculator.values.Real.*;
 
 import java.util.HashMap;
 
+import calculator.errors.TypeError;
 import calculator.functions.Functions;
-import calculator.functions.Operators;
 import lombok.Getter;
 
 public class Complex implements Number {
 	
-	private static final HashMap<Double, HashMap<Double, Complex>> interns = new HashMap<>();
+	private static final HashMap<Double, HashMap<Double, Complex>> interns =
+			new HashMap<>();
 	public static final Complex I = (Complex) valueOf(0, 1),
 			ONE_HALF_I = (Complex) valueOf(0, 0.5);
 	
 	public static Number valueOf(double r, double c) {
-		if (Math.abs(c) < 1e-15)
-			c = 0;
+		// if (Math.abs(c) < 1e-15)
+		// c = 0;
 		
 		if (c == 0.0)
 			return Real.valueOf(r);
@@ -57,11 +59,32 @@ public class Complex implements Number {
 		return Real.valueOf(abs(real, imag));
 	}
 	
+	@Override
+	public Number sqrt() {
+		return Complex.sqrt(real, imag);
+	}
+	
+	@Override
+	public Number cbrt() {
+		return root(3);
+	}
+	
+	@Override
+	public Number root(int root) {
+		check(root != 0, DimensionError);
+		return Complex.pow(real, imag, 1.0 / root, 0.0);
+	}
+	
+	@Override
+	public Number inverse() {
+		return Complex.divide(1.0, 0.0, real, imag);
+	}
+	
 	public Number pow(int i) {
 		if (i == 0)
 			return Real.ONE;
 		if (i < 0) {
-			return Real.ONE.divide(pow(-i));
+			return pow(-i).inverse();
 		}
 		Number result = this;
 		for (int j = 1; j < i; j++)
@@ -95,8 +118,7 @@ public class Complex implements Number {
 		if (b == 0.0 && d == 0.0)
 			return Real.valueOf(Math.pow(a, c));
 		
-		double p1 = Math.pow(a * a + b * b, c / 2)
-				* Math.exp(-d * Math.atan2(b, a));
+		double p1 = Math.pow(a * a + b * b, c / 2) * Math.exp(-d * Math.atan2(b, a));
 		double theta = c * Math.atan2(b, a) + 0.5 * d * Math.log(a * a + b * b);
 		double real = Functions.round(p1 * Math.cos(theta), 15);
 		double cmpx = Functions.round(p1 * Math.sin(theta), 15);
@@ -150,14 +172,14 @@ public class Complex implements Number {
 	
 	@Override
 	public boolean equals(Object obj) {
-		if (!(obj instanceof Number))
+		if (!(obj instanceof Complex))
 			return false;
-		if (obj instanceof Real) {
-			return real == ((Real) obj).doubleValue() && imag == 0.0;
-		} else {
-			Complex c = (Complex) obj;
-			return real == c.real && imag == c.imag;
-		}
+		// if (obj instanceof Real) {
+		// return real == ((Real) obj).doubleValue() && imag == 0.0;
+		// } else {
+		Complex c = (Complex) obj;
+		return real == c.real && imag == c.imag;
+		// }
 	}
 	
 	public static Number sin(Complex x) {
@@ -175,8 +197,8 @@ public class Complex implements Number {
 	}
 	
 	public static Number asin(Complex x) {
-		return I.negate().times(Functions
-				.ln(I.times(x).plus(Functions.sqrt(Real.ONE.minus(x.pow(2))))));
+		return I.negate().times(Functions.ln(
+				I.times(x).plus(Functions.sqrt(Real.ONE.minus(x.pow(2))))));
 	}
 	
 	public static Number acos(Complex x) {
@@ -186,13 +208,13 @@ public class Complex implements Number {
 	public static Number atan(Complex x) {
 		// double a = x.real, b = x.imag;
 		Number Ix = I.times(x);
-		return ONE_HALF_I.times(Functions.ln(Real.ONE.minus(Ix))
-				.minus(Functions.ln(ONE.plus(Ix))));
+		return ONE_HALF_I.times(
+				Functions.ln(Real.ONE.minus(Ix)).minus(Functions.ln(ONE.plus(Ix))));
 	}
 	
 	public static Number atan2(Complex x, Complex y) {
-		return I.negate().times(Functions.ln(x.plus(I.times(y))
-				.divide(Functions.sqrt(x.times(x).plus(y.times(y))))));
+		return I.negate().times(Functions.ln(x.plus(I.times(y)).divide(
+				Functions.sqrt(x.times(x).plus(y.times(y))))));
 	}
 	
 	public static Number sinh(Complex x) {
@@ -214,63 +236,148 @@ public class Complex implements Number {
 	}
 	
 	public static Number acosh(Complex x) {
-		return Functions.ln(x.plus(Functions.sqrt((Complex) x.minus(ONE))
-				.times(Functions.sqrt((Complex) x.plus(ONE)))));
+		return Functions.ln(x.plus(Functions.sqrt((Complex) x.minus(ONE)).times(
+				Functions.sqrt((Complex) x.plus(ONE)))));
 	}
 	
 	public static Number atanh(Complex x) {
-		return ONE_HALF.times(Functions.ln((Complex) x.plus(ONE))
-				.minus(Functions.ln((Complex) x.negate().plus(ONE))));
+		return ONE_HALF.times(Functions.ln((Complex) x.plus(ONE)).minus(
+				Functions.ln((Complex) x.negate().plus(ONE))));
 	}
 	
 	@Override
 	public Number plus(Real r) {
-		return Operators.add(r, this);
+		return Complex.valueOf(real + r.value, imag);
 	}
 	
 	@Override
 	public Number plus(Complex c) {
-		return Operators.add(this, c);
+		return Complex.valueOf(real + c.real, imag + c.imag);
+	}
+	
+	@Override
+	public Number plus(Amount a) {
+		throw new TypeError();
 	}
 	
 	@Override
 	public Number minus(Real r) {
-		return Operators.subtract(this, r);
+		return Complex.valueOf(real - r.value, imag);
 	}
 	
 	@Override
 	public Number minus(Complex c) {
-		return Operators.subtract(this, c);
+		return Complex.valueOf(real - c.real, imag - c.imag);
+	}
+	
+	@Override
+	public Number minus(Amount a) {
+		throw new TypeError();
 	}
 	
 	@Override
 	public Number times(Real r) {
-		return Operators.multiply(r, this);
+		return Complex.valueOf(r.value * real, r.value * imag);
 	}
 	
 	@Override
 	public Number times(Complex c) {
-		return Operators.multiply(this, c);
+		return Complex.multiply(real, imag, c.real, c.imag);
+	}
+	
+	@Override
+	public Number times(Amount a) {
+		throw new TypeError();
 	}
 	
 	@Override
 	public Number divide(Real r) {
-		return Operators.divide(this, r);
+		return valueOf(real / r.value, imag / r.value);
 	}
 	
 	@Override
 	public Number divide(Complex c) {
-		return Operators.divide(this, c);
+		return Complex.divide(real, imag, c.real, c.imag);
+	}
+	
+	@Override
+	public Number divide(Amount a) {
+		throw new TypeError();
 	}
 	
 	@Override
 	public Number pow(Real r) {
-		return Operators.pow(this, r);
+		return Complex.pow(real, imag, r.value, 0);
 	}
 	
 	@Override
 	public Number pow(Complex c) {
-		return Operators.pow(this, c);
+		return Complex.pow(real, imag, c.real, c.imag);
+	}
+	
+	@Override
+	public Number pow(Amount a) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThan(Real r) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThan(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThan(Amount a) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThan(Real r) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThan(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThan(Amount a) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThanOrEqualTo(Real r) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThanOrEqualTo(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isGreaterThanOrEqualTo(Amount a) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThanOrEqualTo(Real r) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThanOrEqualTo(Complex c) {
+		throw new TypeError();
+	}
+	
+	@Override
+	public boolean isLessThanOrEqualTo(Amount a) {
+		throw new TypeError();
 	}
 	
 }

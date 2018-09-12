@@ -3,6 +3,7 @@ package calculator.expressions;
 import static calculator.functions.Functions.*;
 
 import calculator.Scope;
+import calculator.Scope.FileScope;
 import calculator.Visitor;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.ExtensionMethod;
@@ -18,7 +19,7 @@ public class ExpressionIf implements Expression {
 	public Object eval(Scope scope) {
 		if (toBoolean(condition.eval(scope))) {
 			if (thenpart instanceof ExpressionMulti) {
-				scope = new Scope(scope);
+				scope = new FileScope(scope);
 			}
 			Object result = thenpart.eval(scope);
 			
@@ -30,7 +31,7 @@ public class ExpressionIf implements Expression {
 			return scope.getVariable("ans");
 		} else {
 			if (elsepart instanceof ExpressionMulti) {
-				scope = new Scope(scope);
+				scope = new FileScope(scope);
 			}
 			Object result = elsepart.eval(scope);
 			

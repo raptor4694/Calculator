@@ -1,0 +1,243 @@
+
+__UNITS___ = 1;
+
+mu = "µ";
+
+local SIprefixes = { "Y", "Z", "E", "P", "T", "G",
+	"M", "k", "h", "da", "d", "c", "m", mu, "n", 
+	"p", "f", "a", "z", "y"
+};
+
+local SIprefixNames = { "yotta", "zetta", "exa", "peta", "tera", "giga", 
+	"mega", "kilo", "hecto", "deca", "deci", "centi", "milli", "micro", "nano", 
+	"pico", "femto", "atto", "zepto", "yocto"
+};
+
+local unitName;
+local SI = {
+	"A",
+	"cd",
+	"K",
+	"m",
+	"mol",
+	"g",
+	"Hz",
+	"N",
+	"Pa",
+	"J",
+	"W",
+	"C",
+	"V",
+	"F",
+	"Ω",
+	"S",
+	"Wb",
+	"T",
+	"H",
+	"lm",
+	"lx",
+	"Bq",
+	"Gy",
+	"Sv",
+	"kat",
+	"t",
+	"L"
+};
+
+local SInames = {
+	"Ampere",
+	"Candela",
+	"Kelvin",
+	"meter",
+	"mole",
+	"gram",
+	"Hertz",
+	"Newton",
+	"Pascal",
+	"Joule",
+	"Watt",
+	"Coulomb",
+	"Volt",
+	"Farad",
+	"Ohm",
+	"Siemens",
+	"Weber",
+	"Tesla",
+	"Henry",
+	"lumen",
+	"lux",
+	"Becquerel",
+	"Gray",
+	"Sievert",
+	"katal",
+	"ton",
+	"Liter"
+};
+
+local canPluralize = {
+	1,
+	1,
+	0,
+	2,
+	1,
+	1,
+	0,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	0,
+	1,
+	1,
+	1,
+	1,
+	0,
+	1,
+	1,
+	1,
+	1,
+	1,
+	2
+};
+
+local tryGlobal(name, value) {
+	try{
+		Global(name, value);
+	}else{
+		println("Failed to set " + name);
+	}
+};
+
+for(index, unitName : SI) {
+	tryGlobal(unitName=="cd" ? "cD" : unitName, local unit = parseUnit(unitName)); 
+	tryGlobal(SInames[index], unit);
+	if canPluralize[index] then {
+		if canPluralize[index] == 2 then {
+			local tempName = SInames[index][1,$-2] + "re";
+			tryGlobal(tempName, unit);
+			tryGlobal(tempName + "s", unit);
+		};
+		tryGlobal(SInames[index] + "s", unit);
+	};
+	for(I,1,dim(SIprefixes)) {
+		local newName = SIprefixes[I] + unitName;
+		try{
+			tryGlobal(newName, unit = parseUnit(newName));
+			tryGlobal(SIprefixNames[I] + SInames[index].toLowerCase(), unit);
+			tryGlobal(SIprefixNames[I] + SInames[index], unit); 
+			if canPluralize[index] then {
+				if canPluralize[index] == 2 then {
+					local tempName = SIprefixNames[I] + SInames[index][1,$-2].toLowerCase() + "re";
+					tryGlobal(tempName, unit);
+					tryGlobal(tempName + "s", unit);
+					tempName = SIprefixNames[I] + SInames[index][1,$-2] + "re";
+					tryGlobal(tempName, unit);
+					tryGlobal(tempName + "s", unit);
+				};
+				tryGlobal(SIprefixNames[I] + SInames[index].toLowerCase() + "s", unit);
+				tryGlobal(SIprefixNames[I] + SInames[index] + "s", unit); 
+			};	
+		}else{};
+	};
+};
+
+delete SI;
+delete SInames;
+delete SIprefixes;
+delete SIprefixNames;
+
+Amp = Amps = A;
+s = second = seconds = parseUnit("s");
+minute = minutes = parseUnit("min");
+h = hr = hour = hours = hrs = parseUnit("h");
+d = day = days = parseUnit("day");
+mo = month = months = parseUnit("month");
+year = yr = yrs = years = parseUnit("year");
+year_calendar = years_calendar = parseUnit("year_calendar");
+week = wk = weeks = wks = parseUnit("week");
+rad = radian = radians = parseUnit("rad");
+sr = steradian = steradians = parseUnit("sr");
+kmph = km/hr;
+
+local NonSI = {
+	"dB",
+	"atom",
+	"ft",
+	"yd",
+	"in",
+	"mi",
+	"nmi",
+	"Å",
+	"ly",
+	"pt",
+	"lb",
+	"oz",
+	"Fd",
+	"Fr",
+	"rev"
+};
+
+local NonSInames = {
+	"decibel",
+	"atom",
+	"foot",
+	"yard",
+	"inch",
+	"mile",
+	"nautical_mile",
+	"Angstrom",
+	"light_year",
+	"point",
+	"pound",
+	"ounce",
+	"Faraday",
+	"Franklin",
+	"revolution"
+};
+
+local canPluralize = {
+	1,
+	1,
+	3,
+	1,
+	2,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1
+};
+
+for(index, unitName : NonSI) {
+	Global(unitName, local unit = parseUnit(unitName));
+	Global(NonSInames[index], unit);
+	if canPluralize[index] then {
+		if canPluralize[index] == 2 then {
+			Global(NonSInames[index] + "es", unit);
+		} else if canPluralize[index] == 3 then {
+			Global("feet", unit);
+		} else {
+			Global(NonSInames[index] + "s", unit);
+		};
+	};
+};
+
+pound = lb = parseUnit("lb");
+ounce = parseUnit("oz");
+au = parseUnit("ua");
+parsec = pc = parsecs = parseUnit("pc");
+px = pixel = pixels = parseUnit("pixel");
+Fahrenheit = parseUnit("°F");
+degrees = degree = parseUnit("°");
+mph = parseUnit("mph");
+
+return;

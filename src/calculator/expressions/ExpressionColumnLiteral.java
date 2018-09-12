@@ -3,10 +3,10 @@ package calculator.expressions;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import calculator.DimensionError;
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.Visitor;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import calculator.values.Number;
 import lombok.AllArgsConstructor;
 import lombok.experimental.ExtensionMethod;

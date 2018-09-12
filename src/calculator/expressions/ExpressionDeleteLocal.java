@@ -1,7 +1,7 @@
 package calculator.expressions;
 
-import calculator.CalculatorError;
 import calculator.Scope;
+import calculator.errors.CalculatorError;
 
 public class ExpressionDeleteLocal implements Expression {
 	@Override

@@ -5,6 +5,7 @@ import static calculator.TokenKind.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import calculator.errors.SyntaxError;
 import calculator.expressions.Expression;
 import calculator.expressions.ExpressionAbs;
 import calculator.expressions.ExpressionArrayLiteral;

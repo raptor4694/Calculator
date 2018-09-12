@@ -2,10 +2,10 @@ package calculator.expressions;
 
 import static calculator.functions.Functions.*;
 
-import calculator.DimensionError;
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.Visitor;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import calculator.values.EnumOperator;
 import calculator.values.Number;
 import lombok.AllArgsConstructor;

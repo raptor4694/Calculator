@@ -9,13 +9,13 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.List;
 
-import calculator.CalculatorError;
-import calculator.DimensionError;
 import calculator.Scope;
-import calculator.TypeError;
 import calculator.func;
 import calculator.operator;
 import calculator.param;
+import calculator.errors.CalculatorError;
+import calculator.errors.DimensionError;
+import calculator.errors.TypeError;
 import lombok.SneakyThrows;
 
 public class MethodFunction implements Function {
@@ -25,6 +25,10 @@ public class MethodFunction implements Function {
 	private boolean returnsValue;
 	
 	public MethodFunction(Class<?> containingClass, String name) {
+		this(containingClass, name, true);
+	}
+	
+	public MethodFunction(Class<?> containingClass, String name, boolean reqAnnot) {
 		this.name = name.startsWith("_")? name.substring(1) : name;
 		ArrayList<Method> validMethods = new ArrayList<>();
 		minArgCount = -1;
@@ -32,7 +36,7 @@ public class MethodFunction implements Function {
 			if (method.getName().equals(name)) {
 				int mods = method.getModifiers();
 				if (Modifier.isStatic(mods) && Modifier.isPublic(mods)
-						&& (method.getAnnotation(func.class) != null
+						&& (!reqAnnot || method.getAnnotation(func.class) != null
 								|| method.getAnnotation(operator.class) != null)) {
 					int argCount = method.getParameterCount();
 					if (minArgCount == -1 || argCount < minArgCount)
@@ -76,12 +80,11 @@ public class MethodFunction implements Function {
 		for (Method method : methods) {
 			String s = name + "(";
 			Parameter[] paramTypes = method.getParameters();
-			for (int i = 0; i < paramTypes.length; i++) {
-				if (i != 0)
-					s += ", ";
-				Class<?> type = paramTypes[i].getType();
+			boolean first = true;
+			for (Parameter paramType : paramTypes) {
+				Class<?> type = paramType.getType();
 				String typename;
-				param param = paramTypes[i].getAnnotation(param.class);
+				param param = paramType.getAnnotation(param.class);
 				if (param != null) {
 					typename = param.value();
 				} else if (type == Number.class) {
@@ -101,7 +104,13 @@ public class MethodFunction implements Function {
 				} else {
 					typename = type.getSimpleName().toLowerCase();
 				}
-				s += typename;
+				if (!typename.isEmpty()) {
+					if (first)
+						first = false;
+					else
+						s += ", ";
+					s += typename;
+				}
 			}
 			s += ")";
 			func func = method.getAnnotation(func.class);
@@ -149,13 +158,22 @@ public class MethodFunction implements Function {
 	@Override
 	@SneakyThrows
 	public Object callOptionalValue(Scope scope, Object... args) {
-		if (args.length < minArgCount())
-			throw new DimensionError();
-		if (args.length > maxArgCount())
-			throw new DimensionError();
+		
 		Method method = dispatch(methods, args);
-		if (method == null)
-			throw new TypeError();
+		if (method == null) {
+			Object[] newargs = new Object[args.length + 1];
+			System.arraycopy(args, 0, newargs, 0, args.length);
+			newargs[args.length] = scope;
+			method = dispatch(methods, newargs);
+			if (method == null) {
+				if (args.length < minArgCount())
+					throw new DimensionError();
+				if (args.length > maxArgCount())
+					throw new DimensionError();
+				throw new TypeError();
+			}
+			args = newargs;
+		}
 		try {
 			return evalValue(method.invoke(null, args));
 		} catch (InvocationTargetException ex) {

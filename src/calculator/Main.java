@@ -5,21 +5,23 @@ public class Main {
 		if (args.length != 0) {
 			System.setProperty("user.dir", args[0]);
 		}
+		/// System.out.println(Unit.valueOf("s^-1").isStandardUnit());
+		// System.out.println(Unit.valueOf("N").getClass());
+		// AlternateUnit u = (AlternateUnit)SI.NEWTON;
+		// System.out.println(Unit.valueOf("mL"));
+		/*Unit kgms2 = Unit.valueOf("kg*m/s^2");
+		Unit N = SI.NEWTON;
+		Unit lbsfts2 = Unit.valueOf("lb*ft/s^2");
 		
-		/*Amount<?> v = Amount.valueOf("3 m/s");
-		Amount<?> m = Amount.valueOf("2 m");
-		Amount<?> F = Amount.valueOf("2 kg*m/s^2");
+		System.out.println(kgms2.getStandardUnit());
+		System.out.println(N.getStandardUnit());
+		System.out.println(lbsfts2.getStandardUnit());
 		
-		System.out.println(F.);
-		*/
+		System.out.println(kgms2.equals(N));
+		System.out.println(kgms2.isCompatible(N));
+		System.out.println(kgms2.isCompatible(lbsfts2));
 		
-		try {
-			Console.run();
-		} catch (Throwable t) {
-			System.err.println(
-					"A fatal error has been thrown. The program will terminate.");
-			t.printStackTrace();
-		}
 		/**/
+		Console.run();
 	}
 }
